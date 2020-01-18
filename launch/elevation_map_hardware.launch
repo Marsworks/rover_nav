@@ -1,0 +1,27 @@
+<launch>
+
+  <!-- launching T265 & D435i cameras -->
+  <include file="$(find realsense2_camera)/launch/rs_d400_and_t265.launch">
+    <!-- T265 serial -->
+    <arg name="serial_no_camera1" default="905312111417"/>
+    <!-- D435i serial -->
+    <arg name="serial_no_camera2" default="843112070990"/>
+  </include>
+  
+  <!-- Elevation mapping node -->
+  <node pkg="elevation_mapping" type="elevation_mapping" name="elevation_mapping" output="screen">
+    <rosparam command="load" file="$(find rover_nav)/config/elevation_maps/simple_demo_robot.yaml" />
+    <rosparam command="load" file="$(find rover_nav)/config/elevation_maps/simple_demo_map.yaml" />
+    <rosparam command="load" file="$(find elevation_mapping)/config/sensor_processors/perfect.yaml" />
+    <!-- <rosparam command="load" file="$(find elevation_mapping)/config/sensor_processors/realsense_d435.yaml" /-->
+  </node>
+
+  <node pkg="rover_nav" type="ground_truth_pose_publisher.py" name="pose_pub"/>
+
+  <!-- Launch visualizations for the resulting elevation map -->
+  <include file="$(find elevation_mapping_demos)/launch/visualization.launch" />
+
+  <!-- Launch RViz with the demo configuration -->
+  <node name="rviz" pkg="rviz" type="rviz" args="-d $(find rover_nav)/rviz/elevation_map_visualization.rviz" />
+
+</launch>

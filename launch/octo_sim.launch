@@ -1,0 +1,16 @@
+<launch>
+  <node pkg="octomap_server" type="octomap_server_node" name="octomap_server">
+    <param name="resolution" value="0.05"/>
+    <param name="base_frame_id" type="string" value="odom"/>
+    <param name="frame_id" type="string" value="odom"/>
+
+    <!-- maximum range to integrate (speedup!) -->
+    <param name="sensor_model/max_range" value="5.0"/>
+    <remap from="cloud_in" to="/camera/depth/points"/>
+  </node>
+
+  <!-- <node pkg="tf" type="static_transform_publisher" name="map_cam_tf/" args="0 0 0.77 0 0 0 1 t265_odom_frame t265_link 10"/> -->
+
+  <node pkg="rviz" type="rviz" name="rviz" args="-d $(find rover_nav)/rviz/octomap_sim.rviz"/>
+
+</launch>

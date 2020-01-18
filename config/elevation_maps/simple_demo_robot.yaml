@@ -1,0 +1,11 @@
+point_cloud_topic: "/d400/depth/color/points"
+map_frame_id: "t265_odom_frame"
+robot_base_frame_id: "t265_link"
+track_point_frame_id: "t265_link"
+robot_pose_with_covariance_topic: "/ground_truth_pose"
+
+robot_pose_cache_size: 200
+track_point_x: 2
+track_point_y: 0.0
+track_point_z: 0.0
+sensor_frame_id: "t265_link" # source_frame does not exist fix
