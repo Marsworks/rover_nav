@@ -1,8 +1,9 @@
 #!/usr/bin/env python
+import tf
 import rospy
 import numpy as np
 from visualization_msgs.msg import MarkerArray
-from nav_msgs.msg import OccupancyGrid, MapMetaData
+from nav_msgs.msg import OccupancyGrid
 
 map_pub = rospy.Publisher('maro_map', OccupancyGrid, queue_size=10)
 map_res = 0.05
@@ -12,7 +13,15 @@ map_message = OccupancyGrid()
 map_message.header.frame_id = "map"
 map_message.info.resolution = map_res
 
-def callback(data):
+def tf_map_t265_pblisher(x, y):
+    br = tf.TransformBroadcaster()
+    br.sendTransform((x, y, 0),
+                     tf.transformations.quaternion_from_euler(0, 0, 0),
+                     rospy.Time.now(),
+                     "t265_odom_frame",
+                     "map")
+
+def map_publisher_callbask(data):
     '''
     Why am I using data.markers[16] you may ask, I have no idea!
     for some readon that was the only marker getting filled with
@@ -20,9 +29,8 @@ def callback(data):
     this is the case.
     '''
     map_message.header.stamp = rospy.get_rostime()
-    x=[]
-    y=[]
-    z=[]
+    x=[]; y=[]; z=[]
+
     for marker in data.markers[16].points:
         x.append(marker.x)
         y.append(marker.y)
@@ -31,6 +39,9 @@ def callback(data):
     max_x, min_x = max(x), min(x)
     max_y, min_y = max(y), min(y)
     min_z = min(z)
+    mean_z = sum(z) /len(z)
+
+    tf_map_t265_pblisher(-min_x, -min_y)
 
     map_message.info.width = int(round((max_x-min_x) / map_res))
     map_message.info.height = int(round((max_y-min_y) / map_res))
@@ -39,8 +50,6 @@ def callback(data):
     array = np.zeros(shape=(map_message.info.height, map_message.info.width))
     array.fill(0)
 
-    # rospy.loginfo(str(max_x) +  " " + str(max_y) + " " + str(min_z))
-
     for marker in data.markers[16].points:
         x = int(round(((marker.x - min_x) / map_res)))
         x = min(x, map_message.info.width-1)
@@ -48,7 +57,10 @@ def callback(data):
         y = int(round(((marker.y - min_y) / map_res)))
         y = min(y, map_message.info.height-1)
 
-        if marker.z > (min_z+0.1): # decent results wiht 0.4
+        fixed_min_thresh = marker.z > (min_z+0.6) # decent results wiht 0.4
+        avg_thresh = abs(marker.z - mean_z) > 0.6
+
+        if avg_thresh:
             array[y][x] = 100
         else:
             array[y][x] = 0
@@ -57,13 +69,15 @@ def callback(data):
     rospy.loginfo("Published map " + str(max_x) +  " " + str(max_y) + " " + str(min_z))
     map_pub.publish(map_message)
 
-def listener():
-    rospy.init_node('map_creator', anonymous=True)
+def main():
+    rospy.init_node('map_broadcaster', anonymous=True)
 
-    rospy.Subscriber("occupied_cells_vis_array", MarkerArray, callback)
+    rospy.Subscriber("occupied_cells_vis_array", MarkerArray, map_publisher_callbask)
 
-    # spin() simply keeps python from exiting until this node is stopped
     rospy.spin()
 
 if __name__ == '__main__':
-    listener()
+    try:
+        main()
+    except:
+        pass
