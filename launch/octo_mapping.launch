@@ -2,7 +2,7 @@
   <node pkg="octomap_server" type="octomap_server_node" name="octomap_server">
     <param name="resolution" value="0.05"/>
     <remap from="cloud_in" to="/d400/depth/color/points"/>
-    <!-- <param name="filter_ground" type="bool" value="true"/> -->
+    <param name="filter_ground" type="bool" value="true"/>
     <!-- <param name="occupancy_max_z" type="float" value="2.0"/> -->
     <param name="frame_id" type="string" value="t265_odom_frame"/>
     <param name="base_frame_id" type="string" value="t265_odom_frame"/>
@@ -11,14 +11,5 @@
     <param name="sensor_model/max_range" value="5.0"/>
   </node>
 
-  <!-- launching T265 & D435i cameras -->
-  <include file="$(find realsense2_camera)/launch/rs_d400_and_t265.launch">
-    <!-- T265 serial -->
-    <arg name="serial_no_camera1" default="905312111417"/>
-    <!-- D435i serial -->
-    <arg name="serial_no_camera2" default="843112070990"/>
-  </include>
-
-  <node pkg="rviz" type="rviz" name="rviz" args="-d $(find rover_nav)/rviz/octomap_hardware.rviz"/>
-
+  <node pkg="rover_nav" type="map_pub.py" name="2D_map_publisher"/>
 </launch>

@@ -1,0 +1,14 @@
+<launch>
+  <!-- launching T265 & D435i cameras -->
+  <include file="$(find realsense2_camera)/launch/rs_d400_and_t265.launch">
+    <!-- T265 serial -->
+    <arg name="serial_no_camera1" default="905312111417"/>
+    <!-- D435i serial -->
+    <arg name="serial_no_camera2" default="843112070990"/>
+  </include>
+
+  <!-- Mapping launch file -->
+  <include file="$(find rover_nav)/launch/octo_mapping.launch"/>
+
+  <node pkg="rviz" type="rviz" name="rviz" args="-d $(find rover_nav)/rviz/octomap_hardware.rviz"/>
+</launch>
