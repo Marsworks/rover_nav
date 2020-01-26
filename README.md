@@ -29,6 +29,20 @@ cd ..
 catkin_make
 source devel/setup.bash
 ```
+### costmap_2d hack
+There is an issue with the static layer in costmap_2d when the static layer resizes. Implement the temp fix below for thing to work as intended:
+* Find the file
+```bash
+roscd costmap_2d/plugins
+gedit static_layer.cpp
+```
+* Edit line 194 by adding "layered_costmap_->" at the start of the line.
+* compile and build changes
+```bash
+cd ~/catkin_ws
+catkin_make
+source devel/setup.bash
+```
 
 ## Usage Instructions
 * Octomap + 2D navigation + simultaion
