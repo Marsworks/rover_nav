@@ -23,9 +23,11 @@ sudo apt-get update
 sudo apt-get upgrade
 cd catkin_ws/src
 git clone https://gitlab.com/marsworks/rover_nav
-git clone https://gitlab.com/marsworks/rover_description
 git clone https://github.com/ros-planning/navigation.git
-cd ..
+git clone https://gitlab.com/marsworks/rover_description
+cd rover_description/worlds
+sudo cp moon_surface.world //usr/share/gazebo-7/worlds/moon_surface.world
+cd ~/catkin_ws
 catkin_make
 source devel/setup.bash
 ```
