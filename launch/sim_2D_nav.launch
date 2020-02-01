@@ -1,11 +1,18 @@
 <launch>
   <!-- launching robot Description and gazebo -->
-  <include file="$(find rover_description)/launch/rover_description.launch"/>
+  <include file="$(find rover_description)/launch/rover_description.launch">
+    <!-- <arg name="world_name" value="worlds/moon_surface.world"/> world should be saved in "usr/share/gazebo-7/worlds" -->
+    <arg name="world_file" value="worlds/cube.world"/>
+    <arg name="gui_state" value="false"/>
+  </include>
 
   <!-- Mapping launch file -->
   <include file="$(find rover_nav)/launch/octo_mapping.launch"/>
 
-  <!-- <node pkg="tf" type="static_transform_publisher" name="map_cam_tf/" args="0 0 0.77 0 0 0 1 t265_odom_frame t265_link 10"/> -->
+  <node pkg="rover_nav" type="map_pub.py" name="projected_map_publisher"/>
+
+  <!-- move_base launch file -->
+  <include file="$(find rover_nav)/launch/move_base.launch"/>
 
   <node pkg="rviz" type="rviz" name="rviz" args="-d $(find rover_nav)/rviz/octomap_sim.rviz"/>
 
