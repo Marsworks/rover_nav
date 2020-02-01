@@ -7,8 +7,13 @@
     <arg name="serial_no_camera2" default="843112070990"/>
   </include>
 
+  <!-- Add run rosserial -->
+
   <!-- Mapping launch file -->
   <include file="$(find rover_nav)/launch/octo_mapping.launch"/>
+
+  <!-- Running node pub 2D projection of the 3D map -->
+  <node pkg="rover_nav" type="map_pub.py" name="projected_map_publisher"/>
 
   <node pkg="rviz" type="rviz" name="rviz" args="-d $(find rover_nav)/rviz/octomap_hardware.rviz"/>
 </launch>
