@@ -2,7 +2,7 @@
   <node pkg="octomap_server" type="octomap_server_node" name="octomap_server">
     <param name="resolution" value="0.05"/>
     <remap from="cloud_in" to="/d400/depth/color/points"/>
-    <param name="filter_ground" type="bool" value="true"/>
+    <param name="filter_ground" type="bool" value="false"/>
     <!-- <param name="occupancy_max_z" type="float" value="2.0"/> -->
     <param name="frame_id" type="string" value="t265_odom_frame"/>
     <param name="base_frame_id" type="string" value="t265_odom_frame"/>
@@ -10,6 +10,4 @@
     <!-- maximum range to integrate (speedup!) -->
     <param name="sensor_model/max_range" value="5.0"/>
   </node>
-
-  <node pkg="rover_nav" type="map_pub.py" name="2D_map_publisher"/>
 </launch>
