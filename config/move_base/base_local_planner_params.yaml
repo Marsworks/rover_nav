@@ -1,15 +1,20 @@
 TrajectoryPlannerROS:
-  max_vel_x:               0.45
-  min_vel_x:               0.1
-  max_vel_theta:           1.0
-  min_in_place_vel_theta:  0.4
+  max_vel_x:                  1.7
+  min_vel_x:                  0.1
 
-  acc_lim_theta:           3.2
-  acc_lim_x:               2.5
-  acc_lim_y:               2.5
+  max_vel_theta:              4.5
+  min_in_place_vel_theta:     0.6
 
-  xy_goal_tolerance:       0.2
-  yaw_goal_tolerance:      0.8
-  latch_xy_goal_tolerance: false #experiment with this at some point
+  acc_lim_theta:              3.2
+  acc_lim_x:                  0.2
+  acc_lim_y:                  0.2
 
-  holonomic_robot:         false
+  xy_goal_tolerance:          0.2
+  yaw_goal_tolerance:         0.5 # ~30 deg
+
+  # latch_xy_goal_tolerance:    false #experiment with this at some point
+  meter_scoring:              false
+
+  holonomic_robot:            false
+
+  global_frame_id:            "t265_odom_frame"
