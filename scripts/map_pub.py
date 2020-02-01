@@ -10,7 +10,7 @@ map_res = 0.05
 
 map_message = OccupancyGrid()
 
-map_message.header.frame_id = "map"
+map_message.header.frame_id = "t265_odom_frame" #"map"
 map_message.info.resolution = map_res
 
 def tf_map_t265_pblisher(x, y):
@@ -18,13 +18,15 @@ def tf_map_t265_pblisher(x, y):
     br.sendTransform((x, y, 0),
                      tf.transformations.quaternion_from_euler(0, 0, 0),
                      rospy.Time.now(),
-                     "t265_odom_frame",
-                     "map")
-
+                     "map",
+                     "t265_odom_frame")
+temp_lol =1
+init_x = 0
+init_y = 0
 def map_publisher_callbask(data):
     '''
     Why am I using data.markers[16] you may ask, I have no idea!
-    for some readon that was the only marker getting filled with
+    for some reason that was the only marker getting filled with
     significant amounts of usable data. Need to undersatnd why
     this is the case.
     '''
@@ -40,11 +42,16 @@ def map_publisher_callbask(data):
     max_y, min_y = max(y), min(y)
     min_z = min(z)
     mean_z = sum(z) /len(z)
+    
+    map_message.info.origin.position.x = min_x
+    map_message.info.origin.position.y = min_y
 
-    tf_map_t265_pblisher(-min_x, -min_y)
+    # tf_map_t265_pblisher(min_x, min_y)
+    map_message.info.width = abs(int(round((max_x-min_x) / map_res)))
+    map_message.info.height = abs(int(round((max_y-min_y) / map_res)))
 
-    map_message.info.width = int(round((max_x-min_x) / map_res))
-    map_message.info.height = int(round((max_y-min_y) / map_res))
+    # map_message.info.width = 600
+    # map_message.info.height = 600
     # rospy.loginfo(str(map_message.info.width) + " " + str(map_message.info.height))
 
     array = np.zeros(shape=(map_message.info.height, map_message.info.width))
