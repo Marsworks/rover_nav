@@ -4,7 +4,7 @@ import numpy as np
 from visualization_msgs.msg import MarkerArray
 from nav_msgs.msg import OccupancyGrid
 
-map_pub = rospy.Publisher('maro_map', OccupancyGrid, queue_size=10)
+map_pub = rospy.Publisher('2D_projected_map', OccupancyGrid, queue_size=10)
 map_res = 0.05
 
 map_message = OccupancyGrid()
