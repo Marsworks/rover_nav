@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-import tf
 import rospy
 import numpy as np
 from visualization_msgs.msg import MarkerArray
@@ -13,16 +12,7 @@ map_message = OccupancyGrid()
 map_message.header.frame_id = "t265_odom_frame" #"map"
 map_message.info.resolution = map_res
 
-def tf_map_t265_pblisher(x, y):
-    br = tf.TransformBroadcaster()
-    br.sendTransform((x, y, 0),
-                     tf.transformations.quaternion_from_euler(0, 0, 0),
-                     rospy.Time.now(),
-                     "map",
-                     "t265_odom_frame")
-temp_lol =1
-init_x = 0
-init_y = 0
+
 def map_publisher_callbask(data):
     '''
     Why am I using data.markers[16] you may ask, I have no idea!
@@ -46,12 +36,11 @@ def map_publisher_callbask(data):
     map_message.info.origin.position.x = min_x
     map_message.info.origin.position.y = min_y
 
-    # tf_map_t265_pblisher(min_x, min_y)
     map_message.info.width = abs(int(round((max_x-min_x) / map_res)))
     map_message.info.height = abs(int(round((max_y-min_y) / map_res)))
 
-    # map_message.info.width = 600
-    # map_message.info.height = 600
+    # map_message.info.width = 100/map_res
+    # map_message.info.height = 100/map_res
     # rospy.loginfo(str(map_message.info.width) + " " + str(map_message.info.height))
 
     array = np.zeros(shape=(map_message.info.height, map_message.info.width))
