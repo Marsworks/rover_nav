@@ -296,7 +296,7 @@ Visualization Manager:
       Draw Behind: false
       Enabled: true
       Name: Map
-      Topic: /maro_map
+      Topic: /2D_projected_map
       Unreliable: false
       Use Timestamp: false
       Value: true
