@@ -9,6 +9,7 @@
   <depend>elevation_mapping</depend>
   <depend>grid_map_rviz_plugin</depend>
   <depend>rviz</depend>
+  <depend>roscpp</depend>
   <depend>rospy</depend>
   <depend>octomap_server</depend>
 </package>
