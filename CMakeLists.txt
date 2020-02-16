@@ -1,10 +1,14 @@
 cmake_minimum_required(VERSION 3.5.1)
 project(rover_nav)
 
+set(CMAKE_CXX_FLAGS "-std=c++11 ${CMAKE_CXX_FLAGS}")
+
 ## Find catkin macros and libraries
 find_package(catkin REQUIRED COMPONENTS
   elevation_mapping
   grid_map_rviz_plugin
+  grid_map_ros
+  roscpp
   rviz
 )
 
@@ -22,10 +26,12 @@ catkin_package(
   #INCLUDE_DIRS include
   #LIBRARIES
   CATKIN_DEPENDS
-    elevation_mapping
-    grid_map_rviz_plugin
-    rviz
   #DEPENDS
+)
+
+include_directories(
+  #include
+  ${catkin_INCLUDE_DIRS}
 )
 
 #############
@@ -39,3 +45,6 @@ install(DIRECTORY config doc launch rviz
 install(PROGRAMS scripts/ground_truth_pose_publisher.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
+
+add_executable(planner_3D src/planner_3D.cpp)
+target_link_libraries(planner_3D ${catkin_LIBRARIES})
