@@ -4,6 +4,7 @@
 
 #include <vector>
 #include <deque>
+#include <math.h>
 #include <algorithm>
 
 /*
@@ -14,6 +15,8 @@
 
 struct node
 {
+    float x; // Node x position in meters
+    float y; // Node y position in meters
     int row;
     int col;
     int pos;
@@ -27,18 +30,23 @@ struct node
 
     bool visited;
 
+    node(float x_pos, float y_pos, float res)
+    {
+      row = (int)round(x_pos/res);
+      col = (int)round(y_pos/res);
+    }
+
     node(int r, int c)
     {
       row = r;
       col = c;
     }
 
-    node(int r, int c, float *height_array, const int r_num, const int r_stride, 
+    node(int r, int c, const float *height_array, const int r_num, const int r_stride, 
       const int c_num, const int c_stride)
     {
       row = r;
       col = c;
-      height = height_val;
 
       //Calculate position in array
       if(row >=0 && row <r_num && col >=0 && col < c_num)
@@ -109,7 +117,8 @@ bool a_start(const node start, const node goal, const float *height_data,
 
     for(auto c:children)
     {
-        node child(current.row+c.row, current.col+c.col);
+        node child(current.row+c.row, current.col+c.col, height_data, 
+              row_num, row_stride, col_num, col_stride);
         
         if(child.pos >= 0) //That means it is within the map
         {
