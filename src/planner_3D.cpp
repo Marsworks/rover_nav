@@ -41,13 +41,15 @@ struct node
       height = height_val;
 
       //Calculate position in array
-      // multiarray(i,j,k) = data[data_offset + dim_stride[1]*i + dim_stride[2]*j + k]
-      // pos = ;
+      if(row >=0 && row <r_num && col >=0 && col < c_num)
+        pos = (r_stride*row) + (c_stride*col); // multiarray(i,j,k) = data[data_offset + dim_stride[1]*i + dim_stride[2]*j + k]
+      else
+        pos = -1; // Means oustide of map
     }
 
-    float calc_f(node *parent, node *goal)
-    {auto i:list
-      h = pow(goal->row - row, 2) + pow(goal->col - col, 2); 
+    float calc_f(node parent, node goal)
+    {
+      h = pow(goal.row - row, 2) + pow(goal.col - col, 2); 
       height *= 1;
 
       f = g + h + height;  
@@ -59,25 +61,24 @@ bool node_sort (node i,node j) { return (i.g)<j.g; }
 
 bool send_path()
 {
-
+  return 0;
 }
 
-int is_in_list(node *list, int list_len, node &cell)
+int is_in_list(std::deque<node> list, node cell)
 {
-  for(int c=0; c<list_len; c++)
+  for(int c=0; c<list.size(); c++)
     if(list[c].pos == cell.pos)
       return c;
   return -1;
 }
 
-bool a_start(const node *start, const node *goal, const float *height_data, 
-    const int *col_num, const int *col_stride, const int *row_num, const int *row_stride)
+bool a_start(const node start, const node goal, const float *height_data, 
+    const int col_num, const int col_stride, const int row_num, const int row_stride)
 {
   node children[8] = {{1, 1}, {1, -1}, {-1, 1}, {-1, -1},
                     {0, 1}, {0, -1}, {1, 0}, {-1, 0}};
 
-  std::deque<node> open_list;
-  std::vector<node> closed_list;
+  std::deque<node> open_list, closed_list;
 
   open_list.push_back(start);
 
@@ -85,11 +86,12 @@ bool a_start(const node *start, const node *goal, const float *height_data,
   {
     std::sort(open_list.begin(), open_list.end(), node_sort);
 
-    node current = open_list.pop_front();
+    node current = open_list[0];
+    open_list.pop_front();
 
     closed_list.push_back(current);
 
-    if(current.row == goal->row && current.col == goal->col)
+    if(current.row == goal.row && current.col == goal.col)
     {
       ROS_INFO("Plan found");
       
@@ -104,19 +106,18 @@ bool a_start(const node *start, const node *goal, const float *height_data,
     for(auto c:children)
     {
         node child(current.row+c.row, current.col+c.col);
-
-        if(child.row >=0 && child.row <max_row && child.col >=0 && child.col <max_col)
+        
+        if(child.pos >= 0) //That means it is within the map
         {
-          int pos = ;
-          child.height = height_data[pos];
+          child.height = height_data[child.pos];
           
-          pos = is_in_list(closed_list, child);
-          if(pos == -1)
+          int pos_in_list = is_in_list(closed_list, child);
+          if(pos_in_list == -1)
           {
             child.calc_f(current, goal);
 
-            pos = is_in_list(open_list, child);
-            if(pos == -1 || (pos >= 0 && open_list[pos].g > child.g))
+            pos_in_list = is_in_list(open_list, child);
+            if(pos_in_list == -1 || (pos_in_list >= 0 && open_list[pos_in_list].g > child.g))
               open_list.push_back(child);
           }
         }
