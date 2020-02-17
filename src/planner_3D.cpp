@@ -33,7 +33,7 @@ struct node
       col = c;
     }
 
-    node(int r, int c, float height_val, const int r_num, const int r_stride, 
+    node(int r, int c, float *height_array, const int r_num, const int r_stride, 
       const int c_num, const int c_stride)
     {
       row = r;
@@ -42,7 +42,11 @@ struct node
 
       //Calculate position in array
       if(row >=0 && row <r_num && col >=0 && col < c_num)
-        pos = (r_stride*row) + (c_stride*col); // multiarray(i,j,k) = data[data_offset + dim_stride[1]*i + dim_stride[2]*j + k]
+      {
+        // multiarray(i,j,k) = data[data_offset + dim_stride[1]*i + dim_stride[2]*j + k]
+        pos = (r_stride*row) + (c_stride*col);
+        height = height_array[pos];
+      }
       else
         pos = -1; // Means oustide of map
     }
