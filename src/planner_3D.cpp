@@ -84,9 +84,17 @@ int is_in_list(std::deque<node> list, node cell)
   return -1;
 }
 
-bool a_start(const node start, const node goal, const float *height_data, 
-    const int col_num, const int col_stride, const int row_num, const int row_stride)
+bool a_start(const node start, const node goal, const grid_map_msgs::GridMap::ConstPtr& map)
 {
+  float map_res = map->info.resolution;
+  int col_num = map->data[0].layout.dim[0].size;
+  int col_stride = map->data[0].layout.dim[0].stride;
+
+  int row_num = map->data[0].layout.dim[1].size;
+  int row_stride = map->data[0].layout.dim[1].stride;
+
+  const float *height_data = &(map->data[0].data[0]);
+
   node children[8] = {{1, 1}, {1, -1}, {-1, 1}, {-1, -1},
                     {0, 1}, {0, -1}, {1, 0}, {-1, 0}};
 
@@ -144,6 +152,7 @@ void mapCallback(const grid_map_msgs::GridMap::ConstPtr& map)
   ROS_INFO("Res: %f", map->info.resolution);
   ROS_INFO("size; x: %f, y:%f", map->info.length_x, map->info.length_y);
   
+  float map_res = map->info.resolution;
   int col_num = map->data[0].layout.dim[0].size;
   int col_stride = map->data[0].layout.dim[0].stride;
 
@@ -160,6 +169,11 @@ void mapCallback(const grid_map_msgs::GridMap::ConstPtr& map)
   ROS_INFO("col size(): %d", map->data[1].data.size());
   ROS_INFO("label 0: %s", map->data[0].layout.dim[0].label.c_str());
   ROS_INFO("label 1: %s", map->data[0].layout.dim[1].label.c_str());
+
+  node start(0, 0, map_res);
+  node goal(2, 2, map_res);
+
+  a_start(start, goal, map);
 }
 
 
