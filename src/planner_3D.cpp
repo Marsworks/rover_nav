@@ -21,19 +21,18 @@ struct node
     int col;
     int pos;
 
-    float g; // Number of cells from the start node
+    float g = 0; // Number of cells from the start node
     float h; // Distance from node to goal
-    float height; //height data in the cell
     float f; // cost function
+    float height; //height data in the cell
 
     node *parent_node;
 
-    bool visited;
-
-    node(float x_pos, float y_pos, float res)
+    node(double x_pos, double y_pos, const double res)
     {
       row = (int)round(x_pos/res);
       col = (int)round(y_pos/res);
+      ROS_INFO("Special2 row: %d, col: %d, res: %f", row, col, res);
     }
 
     node(int r, int c)
@@ -53,6 +52,7 @@ struct node
       {
         // multiarray(i,j,k) = data[data_offset + dim_stride[1]*i + dim_stride[2]*j + k]
         pos = (r_stride*row) + (c_stride*col);
+        ROS_INFO("pos: %d, row: %d, col: %d", pos, row, col);
         height = height_array[pos];
       }
       else
@@ -61,6 +61,7 @@ struct node
 
     float calc_f(node parent, node goal)
     {
+      g = ++(parent.g);
       h = pow(goal.row - row, 2) + pow(goal.col - col, 2); 
       height *= 1;
 
@@ -104,11 +105,12 @@ bool a_start(const node start, const node goal, const grid_map_msgs::GridMap::Co
 
   while(open_list.size())
   {
+    ROS_INFO("Looping!");
     std::sort(open_list.begin(), open_list.end(), node_sort);
-
+    ROS_INFO("dbg1");
     node current = open_list[0];
     open_list.pop_front();
-
+    ROS_INFO("dbg2");
     closed_list.push_back(current);
 
     if(current.row == goal.row && current.col == goal.col)
@@ -131,7 +133,7 @@ bool a_start(const node start, const node goal, const grid_map_msgs::GridMap::Co
         if(child.pos >= 0) //That means it is within the map
         {
           child.height = height_data[child.pos];
-          
+          ROS_INFO("dbg3");
           int pos_in_list = is_in_list(closed_list, child);
           if(pos_in_list == -1)
           {
@@ -152,17 +154,17 @@ void mapCallback(const grid_map_msgs::GridMap::ConstPtr& map)
   ROS_INFO("Res: %f", map->info.resolution);
   ROS_INFO("size; x: %f, y:%f", map->info.length_x, map->info.length_y);
   
-  float map_res = map->info.resolution;
+  double map_res = map->info.resolution;
   int col_num = map->data[0].layout.dim[0].size;
   int col_stride = map->data[0].layout.dim[0].stride;
 
   int row_num = map->data[0].layout.dim[1].size;
   int row_stride = map->data[0].layout.dim[1].stride;
 
-  std::vector<float> height_data = map->data[0].data;
-  for(auto i:height_data)
-     ROS_INFO("%f", i);
-
+  // std::vector<float> height_data = map->data[0].data;
+  // for(auto i:height_data)
+  //    ROS_INFO("%f", i);
+  ROS_INFO("Res: %f",map_res);
   ROS_INFO("Row; num: %d, stride: %d", row_num, row_stride);
   ROS_INFO("Column; num: %d, stride: %d", col_num, col_stride);
   ROS_INFO("row size(): %d", map->data[0].data.size());
@@ -170,8 +172,8 @@ void mapCallback(const grid_map_msgs::GridMap::ConstPtr& map)
   ROS_INFO("label 0: %s", map->data[0].layout.dim[0].label.c_str());
   ROS_INFO("label 1: %s", map->data[0].layout.dim[1].label.c_str());
 
-  node start(0, 0, map_res);
-  node goal(2, 2, map_res);
+  node start(0.0, 0.0, map_res);
+  node goal(0.5, 0.5, map_res);
 
   a_start(start, goal, map);
 }
@@ -182,6 +184,8 @@ int main(int argc, char **argv)
   ros::init(argc, argv, "planner_3d"); // Node Initialization
   ros::NodeHandle n;
   ros::Subscriber sub = n.subscribe("/octomap_to_gridmap_demo/grid_map", 1000, mapCallback);
+  
+  ROS_INFO("Started...");
   ros::spin();
 
   return 0;
