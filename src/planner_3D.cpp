@@ -15,16 +15,16 @@
 
 struct node
 {
-    float x; // Node x position in meters
-    float y; // Node y position in meters
+    double x; // Node x position in meters
+    double y; // Node y position in meters
     int row;
     int col;
     int pos;
 
-    float g = 0; // Number of cells from the start node
-    float h; // Distance from node to goal
-    float f; // cost function
-    float height; //height data in the cell
+    double g = 0; // Number of cells from the start node
+    double h; // Distance from node to goal
+    double f; // cost function
+    double height; //height data in the cell
 
     node *parent_node;
 
@@ -42,7 +42,7 @@ struct node
     }
 
     node(int r, int c, const float *height_array, const int r_num, const int r_stride, 
-      const int c_num, const int c_stride)
+      const int c_num)
     {
       row = r;
       col = c;
@@ -51,15 +51,20 @@ struct node
       if(row >=0 && row <r_num && col >=0 && col < c_num)
       {
         // multiarray(i,j,k) = data[data_offset + dim_stride[1]*i + dim_stride[2]*j + k]
-        pos = (r_stride*row) + (c_stride*col);
-        ROS_INFO("pos: %d, row: %d, col: %d", pos, row, col);
-        height = height_array[pos];
+        pos = (r_stride*row) + col;
+        ROS_INFO("pose: %d", pos);
+        ROS_INFO("height: %f", height_array[pos]);
+        height = (std::isnan(height_array[pos]))? 0:height_array[pos];
+        ROS_INFO("pos: %d, row: %d, col: %d, height: %f", pos, row, col, height);
       }
       else
+      {
         pos = -1; // Means oustide of map
+        ROS_INFO("Skipped; row: %d, col: %d",row, col);
+      }
     }
 
-    float calc_f(node parent, node goal)
+    double calc_f(node parent, node goal)
     {
       g = ++(parent.g);
       h = pow(goal.row - row, 2) + pow(goal.col - col, 2); 
@@ -87,14 +92,14 @@ int is_in_list(std::deque<node> list, node cell)
 
 bool a_start(const node start, const node goal, const grid_map_msgs::GridMap::ConstPtr& map)
 {
-  float map_res = map->info.resolution;
-  int col_num = map->data[0].layout.dim[0].size;
-  int col_stride = map->data[0].layout.dim[0].stride;
+  double map_res = map->info.resolution;
+  int col_num = map->data[0].layout.dim[0].size; //num of columns
+  int data_len = map->data[0].layout.dim[0].stride; //data len
 
-  int row_num = map->data[0].layout.dim[1].size;
-  int row_stride = map->data[0].layout.dim[1].stride;
+  int row_num = map->data[0].layout.dim[1].size; //num of rows
+  int row_stride = map->data[0].layout.dim[1].stride; // row stride
 
-  const float *height_data = &(map->data[0].data[0]);
+  const float *height_data = &map->data[0].data[0];
 
   node children[8] = {{1, 1}, {1, -1}, {-1, 1}, {-1, -1},
                     {0, 1}, {0, -1}, {1, 0}, {-1, 0}};
@@ -127,13 +132,14 @@ bool a_start(const node start, const node goal, const grid_map_msgs::GridMap::Co
 
     for(auto c:children)
     {
+        ROS_INFO("dbg3");
         node child(current.row+c.row, current.col+c.col, height_data, 
-              row_num, row_stride, col_num, col_stride);
+              row_num, row_stride, col_num);
         
         if(child.pos >= 0) //That means it is within the map
         {
           child.height = height_data[child.pos];
-          ROS_INFO("dbg3");
+          
           int pos_in_list = is_in_list(closed_list, child);
           if(pos_in_list == -1)
           {
@@ -155,22 +161,32 @@ void mapCallback(const grid_map_msgs::GridMap::ConstPtr& map)
   ROS_INFO("size; x: %f, y:%f", map->info.length_x, map->info.length_y);
   
   double map_res = map->info.resolution;
-  int col_num = map->data[0].layout.dim[0].size;
-  int col_stride = map->data[0].layout.dim[0].stride;
 
-  int row_num = map->data[0].layout.dim[1].size;
-  int row_stride = map->data[0].layout.dim[1].stride;
+  //int col_num = map->data[0].layout.dim[0].size; // ?????
+  
+  int col_num = map->data[0].layout.dim[0].size; //num of columns
+  int data_len = map->data[0].layout.dim[0].stride; //data len
 
+  int row_num = map->data[0].layout.dim[1].size; //num of rows
+  int row_stride = map->data[0].layout.dim[1].stride; // row stride
+
+  
   // std::vector<float> height_data = map->data[0].data;
   // for(auto i:height_data)
   //    ROS_INFO("%f", i);
   ROS_INFO("Res: %f",map_res);
+  ROS_INFO("data.size(): %d", map->data[0].data.size());
+  ROS_INFO("data_len: %d", data_len);
+
   ROS_INFO("Row; num: %d, stride: %d", row_num, row_stride);
-  ROS_INFO("Column; num: %d, stride: %d", col_num, col_stride);
-  ROS_INFO("row size(): %d", map->data[0].data.size());
-  ROS_INFO("col size(): %d", map->data[1].data.size());
+  ROS_INFO("Column; num: %d, stride: %d", col_num);
+
+  ROS_INFO("row size(): %d", map->data[0].data.size()); // ???
+  ROS_INFO("col size(): %d", map->data[1].data.size()); // ???
+
   ROS_INFO("label 0: %s", map->data[0].layout.dim[0].label.c_str());
   ROS_INFO("label 1: %s", map->data[0].layout.dim[1].label.c_str());
+  
 
   node start(0.0, 0.0, map_res);
   node goal(0.5, 0.5, map_res);
