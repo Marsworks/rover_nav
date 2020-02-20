@@ -10,11 +10,6 @@
 #include <algorithm>
 #include <boost/bind.hpp>
 
-/*
-/////////////////////////////////////
-/////////CODE NOT COMPLETE!//////////
-/////////////////////////////////////
-*/
 
 struct node
 {
@@ -29,8 +24,9 @@ struct node
     double f; // cost function
     double height; //height data in the cell
 
-    node *parent_node;
+    node *parent_node = NULL;
 
+    node(){}
     node(double x_pos, double y_pos, const double res)
     {
       row = (int)round(x_pos/res);
@@ -55,8 +51,6 @@ struct node
       {
         // multiarray(i,j,k) = data[data_offset + dim_stride[1]*i + dim_stride[2]*j + k]
         pos = (r_stride*row) + col;
-        ROS_INFO("pose: %d", pos);
-        ROS_INFO("height: %f", height_array[pos]);
         height = (std::isnan(height_array[pos]))? 0:height_array[pos];
         ROS_INFO("pos: %d, row: %d, col: %d, height: %f", pos, row, col, height);
       }
@@ -67,22 +61,23 @@ struct node
       }
     }
 
-    double calc_f(node parent, node goal)
+    void calc_f(node *parent, node goal)
     {
-      parent_node = &parent;
+      parent_node = parent;
       ROS_INFO("parent_node; row: %d, col: %d", parent_node->row, parent_node->col);
-      g = ++(parent.g);
+      if( parent_node->parent_node != NULL)
+      ROS_INFO("parent_node->parent_node; row: %d, col: %d", 
+          parent_node->parent_node->row, parent_node->parent_node->col);
+      g = 1 + parent_node->g;
       h = pow(goal.row - row, 2) + pow(goal.col - col, 2); 
-      height *= 1;
+      height = 0;
 
-      f = g + h;// + height;  
-      return f;
+      f = g + h + height;
+      ROS_INFO("Cost function; g: %f, h: %f f: %f", g, h, f);
     }
 };
 
-bool node_sort (node i,node j) { return (i.g)<j.g; }
-
-bool send_path(node &cell, node start, double res, ros::Publisher &plan_pub)
+bool send_path(node *cell, node start, double res, ros::Publisher &plan_pub)
 {
   nav_msgs::Path plan;
   geometry_msgs::PoseStamped temp_pos;
@@ -90,28 +85,32 @@ bool send_path(node &cell, node start, double res, ros::Publisher &plan_pub)
   ROS_INFO("dbg1");
   ROS_INFO("start row: %d, col: %d", start.row, start.col);
   
-  while(cell.row != start.row && cell.col != start.col && ros::ok())
+  while(cell != NULL && ros::ok())
   {
-    ROS_INFO("Looping !; Cell address %d", &cell);
-    ROS_INFO("Looping !; Cell row: %d, col: %d", cell.row, cell.col);
-    //ROS_INFO("dbg2");
-    temp_pos.pose.position.x = (cell.row) * res;
-    temp_pos.pose.position.y = (cell.col) * res;
+    //std::cin.get();
+
+    ROS_INFO("Looping !; Cell address %d", cell);
+    ROS_INFO("Looping !; Cell row: %d, col: %d", cell->row, cell->col);
+    
+    temp_pos.pose.position.x = (cell->row) * res;
+    temp_pos.pose.position.y = (cell->col) * res;
     //temp_pos.pose.position.y = temp_node->height;
+
     poses_list.push_back(temp_pos);
-    ROS_INFO("Looping !; Cell row: %d, col: %d", cell.parent_node->row, cell.parent_node->col);
-    cell = *(cell.parent_node);
-    ROS_INFO("Looping !; Cell row: %d, col: %d", cell.row, cell.col);
+    cell = cell->parent_node;
   }
 
-  ROS_INFO("dbg3");
   plan.header.frame_id = "map";
   plan.poses = poses_list;
-  ROS_INFO("dbg4");
+  
   plan_pub.publish(plan);
-  ROS_INFO("dbg5");
 
   return 1;
+}
+
+bool node_sort (node i,node j) 
+{ 
+  return i.f < j.f; 
 }
 
 int is_in_list(std::deque<node> list, node cell)
@@ -125,6 +124,7 @@ int is_in_list(std::deque<node> list, node cell)
 bool a_start(const node start, const node goal, const grid_map_msgs::GridMap::ConstPtr& map, ros::Publisher &plan_pub)
 {
   double map_res = map->info.resolution;
+
   int col_num = map->data[0].layout.dim[0].size; //num of columns
   int data_len = map->data[0].layout.dim[0].stride; //data len
 
@@ -133,24 +133,28 @@ bool a_start(const node start, const node goal, const grid_map_msgs::GridMap::Co
 
   const float *height_data = &map->data[0].data[0];
 
+  std::deque<node> open_list, closed_list;
+  
   node children[8] = {{1, 1}, {1, -1}, {-1, 1}, {-1, -1},
                     {0, 1}, {0, -1}, {1, 0}, {-1, 0}};
-
-  std::deque<node> open_list, closed_list;
 
   open_list.push_back(start);
 
   while(open_list.size() && ros::ok())
   {
+    //std::cin.get();
+    
     ROS_INFO("Looping!");
     std::sort(open_list.begin(), open_list.end(), node_sort);
-    //ROS_INFO("dbg1");
-    node current = open_list[0];
+  
+    node *current = new node(open_list[0]);
+    //current = &open_list[0];
+    ROS_INFO("Current addres: %d", current);
     open_list.pop_front();
     //ROS_INFO("dbg2");
-    closed_list.push_back(current);
+    closed_list.push_back(*current);
 
-    if(current.row == goal.row && current.col == goal.col)
+    if(current->row == goal.row && current->col == goal.col)
     {
       ROS_INFO("Plan found");
       
@@ -159,14 +163,13 @@ bool a_start(const node start, const node goal, const grid_map_msgs::GridMap::Co
       else
         ROS_INFO("Failed to publish plan");
       
-      break;
+      return 1;
     }
 
     for(auto c:children)
     {
-      //ROS_INFO("dbg3");
-      node child(current.row+c.row, current.col+c.col, height_data, 
-            row_num, row_stride, col_num);
+      node child = node(current->row+c.row, current->col+c.col, 
+            height_data, row_num, row_stride, col_num);
       
       if(child.pos >= 0) //That means it is within the map
       {
