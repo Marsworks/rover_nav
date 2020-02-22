@@ -1,14 +1,13 @@
 global_frame: t265_odom_frame
 robot_base_frame: base_link
-update_frequency: 10.0
-publish_frequency: 10.0
-rolling_window: false
-# always_send_full_costmap: false
-# obstacle_range:           6
-# raytrace_range:           3.0
+update_frequency: 5.0
+publish_frequency: 5.0
+rolling_window: true
+width: 20
+height: 20
 transform_tolerance: 2
 footprint:
-  [[-0.153, -0.1405], [-0.153, 0.1405], [0.153, 0.1405], [0.153, -0.1405]]
+  [[-0.45, -0.375], [0.45, -0.375], [0.45, 0.375], [-0.45, 0.375]]
 
 plugins:
   - { name: static, type: "costmap_2d::StaticLayer" }
@@ -19,6 +18,6 @@ inflation:
   inflation_radius: 0.55
 
 static:
-  map_topic: /maro_map
+  map_topic: /2D_projected_map
   lethal_cost_threshold: 100
   subscribe_to_updates: true
