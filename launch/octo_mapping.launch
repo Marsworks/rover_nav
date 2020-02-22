@@ -11,6 +11,8 @@
     <param name="sensor_model/max_range" value="5.0"/>
   </node>
 
+  <!-- <rosparam command="load" file="$(find rover_nav/config/grid_map/gridmap_params.yaml"/> -->
+  <rosparam command="load" file="$(find grid_map_demos)/config/octomap_to_gridmap_demo.yaml" />
    <!-- Launch the octomap conversion node -->
   <node pkg="grid_map_demos" type="octomap_to_gridmap_demo" name="octomap_to_gridmap_demo" output="screen" />
 
