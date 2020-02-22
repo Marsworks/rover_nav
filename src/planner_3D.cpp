@@ -27,10 +27,18 @@ struct node
     node *parent_node = NULL;
 
     node(){}
-    node(double x_pos, double y_pos, const double res)
+    node(double x_pos, double y_pos, const double res, int row_offset, int col_offset)
     {
-      row = (int)round(x_pos/res);
-      col = (int)round(y_pos/res);
+      /*
+      args:
+        x_pos: x pose in the t265 frame (m)
+        y_pos: y pose in the t265 frame (m)
+        res: map resolution (m/cell)
+        row_offset: map x origin pose with reference to global frame (t265_odom_frame) (m)
+        col_offset: map y origin pose with reference to global frame (t265_odom_frame) (m)
+      */
+      row = (int)round(x_pos/res) + row_offset;
+      col = (int)round(y_pos/res) + col_offset;
       ROS_INFO("Special2 row: %d, col: %d, res: %f", row, col, res);
     }
 
@@ -70,11 +78,14 @@ struct node
       //ROS_INFO("parent_node->parent_node; row: %d, col: %d", 
        //   parent_node->parent_node->row, parent_node->parent_node->col);
       g = 1 + parent_node->g;
-      h = pow(goal.row - row, 2) + pow(goal.col - col, 2); 
-      //height = 0;
-
-      f = g + h + height;
-      //ROS_INFO("Cost function; g: %f, h: %f f: %f", g, h, f);
+      h = sqrt(pow(goal.row - row, 2) + pow(goal.col - col, 2)); 
+      //height = pow(height, 3);
+      double height_factor = 100;
+      if(std::isfinite(height))
+        f = g + h + (height*height_factor);
+      else
+        f = g + h;
+      ROS_INFO("Cost function; g: %f, h: %f, height:%f & f: %f", g, h, height*height_factor, f);
     }
 };
 
@@ -85,16 +96,14 @@ bool send_path(node *cell, node start, double res, ros::Publisher &plan_pub)
   std::vector<geometry_msgs::PoseStamped> poses_list;
   
   while(cell != NULL && ros::ok())
-  {
-    //std::cin.get();
-
-    //ROS_INFO("Looping !; Cell address %d", cell);
-    //ROS_INFO("Looping !; Cell row: %d, col: %d", cell->row, cell->col);
-    
+  {    
     temp_pos.pose.position.x = (cell->row) * res;
     temp_pos.pose.position.y = (cell->col) * res;
+    
     if(std::isfinite(cell->height))
       temp_pos.pose.position.z = cell->height;
+    else
+      temp_pos.pose.position.z = 0;
 
     poses_list.push_back(temp_pos);
     cell = cell->parent_node;
@@ -115,6 +124,7 @@ bool node_sort (node i,node j)
 
 int is_in_list(std::deque<node> list, node cell)
 {
+  // ToDo convert to binary search
   for(int c=0; c<list.size(); c++)
     if(list[c].pos == cell.pos)
       return c;
@@ -162,8 +172,6 @@ bool a_start(const node start, const node goal, const grid_map_msgs::GridMap::Co
       
       if(send_path(current, start, map_res, plan_pub))
         ROS_INFO("Plan published");
-      else
-        ROS_INFO("Failed to publish plan");
       
       return 1;
     }
@@ -192,13 +200,16 @@ bool a_start(const node start, const node goal, const grid_map_msgs::GridMap::Co
       }
     }
   }
+
+  ROS_INFO("Failed to publish plan");
+  return 0;
 }
 
 
 void mapCallback(ros::Publisher &plan_pub, const grid_map_msgs::GridMap::ConstPtr& map)
 {
-  ROS_INFO("Res: %f", map->info.resolution);
-  ROS_INFO("size; x: %f, y:%f", map->info.length_x, map->info.length_y);
+  // ROS_INFO("Res: %f", map->info.resolution);
+  // ROS_INFO("size; x: %f, y:%f", map->info.length_x, map->info.length_y);
   
   double map_res = map->info.resolution;
 
@@ -214,22 +225,26 @@ void mapCallback(ros::Publisher &plan_pub, const grid_map_msgs::GridMap::ConstPt
   // std::vector<float> height_data = map->data[0].data;
   // for(auto i:height_data)
   //    ROS_INFO("%f", i);
-  ROS_INFO("Res: %f",map_res);
-  ROS_INFO("data.size(): %d", map->data[0].data.size());
-  ROS_INFO("data_len: %d", data_len);
+  // ROS_INFO("Res: %f",map_res);
+  // ROS_INFO("data.size(): %d", map->data[0].data.size());
+  // ROS_INFO("data_len: %d", data_len);
 
-  ROS_INFO("Row; num: %d, stride: %d", row_num, row_stride);
-  ROS_INFO("Column; num: %d, stride: %d", col_num);
+  // ROS_INFO("Row; num: %d, stride: %d", row_num, row_stride);
+  // ROS_INFO("Column; num: %d, stride: %d", col_num);
 
-  ROS_INFO("row size(): %d", map->data[0].data.size()); // ???
-  ROS_INFO("col size(): %d", map->data[1].data.size()); // ???
+  // ROS_INFO("row size(): %d", map->data[0].data.size()); // ???
+  // ROS_INFO("col size(): %d", map->data[1].data.size()); // ???
 
-  ROS_INFO("label 0: %s", map->data[0].layout.dim[0].label.c_str());
-  ROS_INFO("label 1: %s", map->data[0].layout.dim[1].label.c_str());
+  // ROS_INFO("label 0: %s", map->data[0].layout.dim[0].label.c_str());
+  // ROS_INFO("label 1: %s", map->data[0].layout.dim[1].label.c_str());
+  int x_offset = (map->info.pose.position.x)/map_res;
+  int y_offset = (map->info.pose.position.y)/map_res;
   
-
-  node start(0.0, 0.0, map_res);
-  node goal(1, 1, map_res);
+  double start_x, start_y, goal_x, goal_y;
+  std::cout << "Enter start & goal: \n";
+  std::cin  >> start_x >> start_y >> goal_x >> goal_y;
+  node start(start_x, start_y, map_res, x_offset, y_offset);
+  node goal(goal_x, goal_y, map_res, x_offset, y_offset);
 
   a_start(start, goal, map, plan_pub);
 }
@@ -244,7 +259,7 @@ int main(int argc, char **argv)
   ros::Publisher plan_pub = n.advertise<nav_msgs::Path>("path_3D", 1000);
   ros::Subscriber sub = n.subscribe<grid_map_msgs::GridMap>("/octomap_to_gridmap_demo/grid_map", 1000, boost::bind(&mapCallback, boost::ref(plan_pub), _1));
   
-  ROS_INFO("Started...");
+  ROS_INFO("LOL Started...");
   ros::spin();
 
   return 0;
