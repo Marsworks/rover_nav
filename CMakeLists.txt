@@ -5,7 +5,7 @@ set(CMAKE_CXX_FLAGS "-std=c++11 ${CMAKE_CXX_FLAGS}")
 
 ## Find catkin macros and libraries
 find_package(catkin REQUIRED COMPONENTS
-  elevation_mapping
+  grid_map
   grid_map_rviz_plugin
   grid_map_ros
   roscpp

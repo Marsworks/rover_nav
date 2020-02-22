@@ -6,7 +6,7 @@
   <maintainer email="mkmtaher1@sheffield.ac.uk">Marwan Taher</maintainer>
   <license>BSD</license>
   <buildtool_depend>catkin</buildtool_depend>
-  <depend>elevation_mapping</depend>
+  <depend>grid_map</depend>
   <depend>grid_map_rviz_plugin</depend>
   <depend>rviz</depend>
   <depend>roscpp</depend>
