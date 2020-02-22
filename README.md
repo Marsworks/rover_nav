@@ -9,7 +9,7 @@
 ### ROS packages
 * realsense2_camera
   * Install from  [here](https://github.com/IntelRealSense/realsense-ros).
-* grid_map sudo apt-get install ros-$ROS_DISTRO-grid-map
+* grid_map
 ```shell
 sudo apt-get install ros-$ROS_DISTRO-grid-map
 ```
