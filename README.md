@@ -9,8 +9,11 @@
 ### ROS packages
 * realsense2_camera
   * Install from  [here](https://github.com/IntelRealSense/realsense-ros).
-* elevation_mapping
-  * Install from [here](https://github.com/ANYbotics/elevation_mapping).
+* grid_map sudo apt-get install ros-$ROS_DISTRO-grid-map
+```shell
+sudo apt-get install ros-$ROS_DISTRO-grid-map
+```
+
 * ocotmap
 ```shell
 sudo apt install ros-kinetic-octomap
@@ -22,9 +25,9 @@ sudo apt install ros-kinetic-octomap-server
 sudo apt-get update
 sudo apt-get upgrade
 cd catkin_ws/src
-git clone https://gitlab.com/marsworks/rover_nav
+git clone https://github.com/Marsworks/rover_nav
 git clone https://github.com/ros-planning/navigation.git
-git clone https://gitlab.com/marsworks/rover_description
+git clone https://github.com/Marsworks/rover_description
 cd rover_description/worlds
 sudo cp moon_surface.world //usr/share/gazebo-7/worlds/moon_surface.world
 cd ~/catkin_ws
