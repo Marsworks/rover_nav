@@ -1,8 +1,8 @@
 <launch>
   <!-- launching robot Description and gazebo -->
   <include file="$(find rover_description)/launch/rover_description.launch">
-    <!-- <arg name="world_name" value="worlds/moon_surface.world"/> world should be saved in "usr/share/gazebo-7/worlds" -->
-    <arg name="world_file" value="worlds/cube.world"/>
+    <arg name="world_file" value="worlds/moon_surface.world"/> <!--world should be saved in "usr/share/gazebo-7/worlds"-->
+    <!-- <arg name="world_file" value="worlds/cube.world"/> -->
     <arg name="gui_state" value="false"/>
   </include>
 
