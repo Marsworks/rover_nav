@@ -1,6 +1,6 @@
 <launch>
   <node pkg="octomap_server" type="octomap_server_node" name="octomap_server">
-    <param name="resolution" value="0.05"/>
+    <param name="resolution" value="0.1"/> <!--0.05-->
     <remap from="cloud_in" to="/d400/depth/color/points"/>
     <param name="filter_ground" type="bool" value="false"/>
     <!-- <param name="occupancy_max_z" type="float" value="2.0"/> -->
@@ -10,4 +10,11 @@
     <!-- maximum range to integrate (speedup!) -->
     <param name="sensor_model/max_range" value="5.0"/>
   </node>
+
+   <!-- Launch the octomap conversion node -->
+  <node pkg="grid_map_demos" type="octomap_to_gridmap_demo" name="octomap_to_gridmap_demo" output="screen" />
+
+  <!-- Launch the grid map visualizer -->
+  <node pkg="grid_map_visualization" type="grid_map_visualization" name="grid_map_visualization" output="screen" />
+  
 </launch>
