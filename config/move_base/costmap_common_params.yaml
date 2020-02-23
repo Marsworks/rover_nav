@@ -18,6 +18,6 @@ inflation:
   inflation_radius: 0.55
 
 static:
-  map_topic: /2D_projected_map
+  map_topic: /projected_map_2D
   lethal_cost_threshold: 100
   subscribe_to_updates: true
