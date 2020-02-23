@@ -3,6 +3,7 @@
 #include <grid_map_msgs/GridMap.h>
 #include <grid_map_ros/grid_map_ros.hpp>
 #include <geometry_msgs/PoseStamped.h>
+#include <visualization_msgs/Marker.h>
 
 #include <deque>
 #include <vector>
@@ -27,19 +28,24 @@ struct node
     node *parent_node = NULL;
 
     node(){}
-    node(double x_pos, double y_pos, const double res, int row_offset, int col_offset)
+    node(double x_pos, double y_pos, const double res, double x_offset, double y_offset, double map_x_len, double map_y_len)
     {
       /*
       args:
         x_pos: x pose in the t265 frame (m)
         y_pos: y pose in the t265 frame (m)
         res: map resolution (m/cell)
-        row_offset: map x origin pose with reference to global frame (t265_odom_frame) (m)
-        col_offset: map y origin pose with reference to global frame (t265_odom_frame) (m)
+        x_offset: map x origin pose with reference to global frame (t265_odom_frame) (m)
+        y_offset: map y origin pose with reference to global frame (t265_odom_frame) (m)
       */
-      row = (int)round(x_pos/res) + row_offset;
-      col = (int)round(y_pos/res) + col_offset;
+      row = (int)round((x_offset + (map_x_len/2) - x_pos)/res);
+      col = (int)round((y_offset + (map_y_len/2) - y_pos)/res);
+
+      x = x_pos;
+      y = y_pos;
+
       ROS_INFO("Special2 row: %d, col: %d, res: %f", row, col, res);
+      std::cin.get();
     }
 
     node(int r, int c)
@@ -49,43 +55,39 @@ struct node
     }
 
     node(int r, int c, const float *height_array, const int r_num, const int r_stride, 
-      const int c_num)
+      const int c_num, const double res, double x_offset, double y_offset, double map_x_len, double map_y_len)
     {
       row = r;
       col = c;
 
-      //Calculate position in array
+      x = x_offset + (map_x_len/2) - (row*res);
+      y = y_offset + (map_y_len/2) - (col*res);
+
+      // Calculate position in array
       if(row >=0 && row <r_num && col >=0 && col < c_num)
       {
         // multiarray(i,j,k) = data[data_offset + dim_stride[1]*i + dim_stride[2]*j + k]
         pos = (r_stride*row) + col;
-        height = (std::isnan(height_array[pos]))? 0:height_array[pos];
-        height = (std::isinf(height_array[pos]))? 10:height_array[pos];
-        //ROS_INFO("pos: %d, row: %d, col: %d, height: %f", pos, row, col, height);
+        height = (std::isfinite(height_array[pos]))? height_array[pos]:0;
       }
       else
-      {
         pos = -1; // Means oustide of map
-        //ROS_INFO("Skipped; row: %d, col: %d",row, col);
-      }
+      
+      // ROS_INFO("pos: %d, row: %d, col: %d, height: %f", pos, row, col, height);
     }
 
     void calc_f(node *parent, node goal)
     {
       parent_node = parent;
       //ROS_INFO("parent_node; row: %d, col: %d", parent_node->row, parent_node->col);
-      if( parent_node->parent_node != NULL)
-      //ROS_INFO("parent_node->parent_node; row: %d, col: %d", 
-       //   parent_node->parent_node->row, parent_node->parent_node->col);
+      
       g = 1 + parent_node->g;
       h = sqrt(pow(goal.row - row, 2) + pow(goal.col - col, 2)); 
       //height = pow(height, 3);
       double height_factor = 100;
-      if(std::isfinite(height))
-        f = g + h + (height*height_factor);
-      else
-        f = g + h;
-      ROS_INFO("Cost function; g: %f, h: %f, height:%f & f: %f", g, h, height*height_factor, f);
+      
+      f = g + h + (height*height_factor);
+      ROS_INFO("Cost function; g: %.2f, h: %.2f, height:%.2f & f: %.2f", g, h, height*height_factor, f);
     }
 };
 
@@ -97,9 +99,9 @@ bool send_path(node *cell, node start, double res, ros::Publisher &plan_pub)
   
   while(cell != NULL && ros::ok())
   {    
-    temp_pos.pose.position.x = (cell->row) * res;
-    temp_pos.pose.position.y = (cell->col) * res;
-    
+    temp_pos.pose.position.x = cell->x;
+    temp_pos.pose.position.y = cell->y;
+
     if(std::isfinite(cell->height))
       temp_pos.pose.position.z = cell->height;
     else
@@ -143,6 +145,9 @@ bool a_start(const node start, const node goal, const grid_map_msgs::GridMap::Co
   int row_num = map->data[0].layout.dim[1].size; //num of rows
   int row_stride = map->data[0].layout.dim[1].stride; // row stride
 
+  int x_offset = (map->info.pose.position.x);
+  int y_offset = (map->info.pose.position.y);
+
   const float *height_data = &map->data[0].data[0];
 
   std::deque<node> open_list, closed_list;
@@ -179,7 +184,7 @@ bool a_start(const node start, const node goal, const grid_map_msgs::GridMap::Co
     for(auto c:children)
     {
       node child = node(current->row+c.row, current->col+c.col, 
-            height_data, row_num, row_stride, col_num);
+            height_data, row_num, row_stride, col_num, map_res, x_offset, y_offset, map->info.length_x, map->info.length_y);
       
       if(child.pos >= 0) //That means it is within the map
       {
@@ -206,7 +211,7 @@ bool a_start(const node start, const node goal, const grid_map_msgs::GridMap::Co
 }
 
 
-void mapCallback(ros::Publisher &plan_pub, const grid_map_msgs::GridMap::ConstPtr& map)
+void mapCallback(ros::Publisher &plan_pub, ros::Publisher &arrow_pub,const grid_map_msgs::GridMap::ConstPtr& map)
 {
   // ROS_INFO("Res: %f", map->info.resolution);
   // ROS_INFO("size; x: %f, y:%f", map->info.length_x, map->info.length_y);
@@ -237,14 +242,45 @@ void mapCallback(ros::Publisher &plan_pub, const grid_map_msgs::GridMap::ConstPt
 
   // ROS_INFO("label 0: %s", map->data[0].layout.dim[0].label.c_str());
   // ROS_INFO("label 1: %s", map->data[0].layout.dim[1].label.c_str());
-  int x_offset = (map->info.pose.position.x)/map_res;
-  int y_offset = (map->info.pose.position.y)/map_res;
+
+  visualization_msgs::Marker marker;
+  marker.header.frame_id = "t265_odom_frame";
+  marker.header.stamp = ros::Time();
+  
+  marker.type = visualization_msgs::Marker::ARROW;
+  marker.action = visualization_msgs::Marker::ADD;
+  marker.scale.x = 0.8;
+  marker.scale.y = 0.1;
+  marker.scale.z = 0.1;
+  marker.color.a = 1.0; // Don't forget to set the alpha!
+
+  int x_offset = (map->info.pose.position.x);
+  int y_offset = (map->info.pose.position.y);
   
   double start_x, start_y, goal_x, goal_y;
   std::cout << "Enter start & goal: \n";
   std::cin  >> start_x >> start_y >> goal_x >> goal_y;
-  node start(start_x, start_y, map_res, x_offset, y_offset);
-  node goal(goal_x, goal_y, map_res, x_offset, y_offset);
+  
+  node start(start_x, start_y, map_res, x_offset, y_offset, map->info.length_x, map->info.length_y);
+  
+  marker.id = 0;
+  marker.pose.position.x = start.x;
+  marker.pose.position.y = start.y;
+  marker.color.r = 1.0;
+  marker.color.g = 0.0;
+
+  marker.mesh_resource = "package://pr2_description/meshes/base_v0/base.dae";
+  arrow_pub.publish( marker );
+  
+  node goal(goal_x, goal_y, map_res, x_offset, y_offset, map->info.length_x, map->info.length_y);
+  marker.id = 1;
+  marker.pose.position.x = goal.x;
+  marker.pose.position.y = goal.y;
+  marker.color.r = 0.0;
+  marker.color.g = 1.0;
+
+  marker.mesh_resource = "package://pr2_description/meshes/base_v0/base.dae";
+  arrow_pub.publish( marker );
 
   a_start(start, goal, map, plan_pub);
 }
@@ -254,10 +290,14 @@ int main(int argc, char **argv)
 {
   ros::init(argc, argv, "planner_3d"); // Node Initialization
   ros::NodeHandle n;
-  // https://answers.ros.org/question/12970/how-to-use-nodehandle-in-callback/
   //ros::Subscriber sub = n.subscribe("/octomap_to_gridmap_demo/grid_map", 1000, mapCallback);
+  
+  ros::Publisher marker_pub = n.advertise<visualization_msgs::Marker>( "points_visualization", 0 );
   ros::Publisher plan_pub = n.advertise<nav_msgs::Path>("path_3D", 1000);
-  ros::Subscriber sub = n.subscribe<grid_map_msgs::GridMap>("/octomap_to_gridmap_demo/grid_map", 1000, boost::bind(&mapCallback, boost::ref(plan_pub), _1));
+  
+  // https://answers.ros.org/question/12970/how-to-use-nodehandle-in-callback/
+  ros::Subscriber sub = n.subscribe<grid_map_msgs::GridMap>("/octomap_to_gridmap_demo/grid_map", 
+      1000, boost::bind(&mapCallback, boost::ref(plan_pub), boost::ref(marker_pub) , _1));
   
   ROS_INFO("LOL Started...");
   ros::spin();
