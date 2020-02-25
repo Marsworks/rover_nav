@@ -1,9 +1,10 @@
 #include <ros/ros.h>
 #include <nav_msgs/Path.h>
+#include <tf/transform_listener.h>
 #include <grid_map_msgs/GridMap.h>
-#include <grid_map_ros/grid_map_ros.hpp>
 #include <geometry_msgs/PoseStamped.h>
 #include <visualization_msgs/Marker.h>
+#include <grid_map_ros/grid_map_ros.hpp>
 #include <grid_map_ros/GridMapRosConverter.hpp>
 
 #include <deque>
@@ -29,10 +30,13 @@ struct node
     {
       position = pos;
       if(map.isInside(position))
+      {
         map.getIndex(position, index);
+        height = map.atPosition("elevation", position);
+        height = (std::isfinite(height))? height:0;
+      }
 
       // ROS_INFO("Special2 row: %d, col: %d, res: %f", row, col, res);
-      // std::cin.get();
     }
 
     node(grid_map::Index ind, const grid_map::GridMap &map)
@@ -62,12 +66,11 @@ struct node
       //ROS_INFO("parent_node; row: %d, col: %d", parent_node->row, parent_node->col);
       
       g = 1 + parent_node->g;
-      h = sqrt(pow(goal.position(0) - position(0), 2) + pow(goal.position(1) - position(1), 2));
-      //height = pow(height, 3);
-      double height_factor = 10;
       
-      f = g + h + (height*height_factor);
-      ROS_INFO("Cost function; g: %.2f, h: %.2f, height:%.2f & f: %.2f", g, h, height, f);
+      h = sqrt(pow(goal.position(0) - position(0), 2) + pow(goal.position(1) - position(1), 2));
+      
+      f = g + h*50 + height*40;
+      //ROS_INFO("Cost function; g: %.2f, h: %.2f, height_cost:%.2f & f: %.2f", g, h, height_cost, f);
     }
 };
 
@@ -109,8 +112,23 @@ int is_in_list(std::deque<node> list, node cell)
   return -1;
 }
 
-bool a_start(const node start, const node goal, grid_map::GridMap &map, ros::Publisher &plan_pub)
+bool a_start(const node start, const node goal, grid_map::GridMap &map, ros::Publisher &plan_pub, ros::Publisher &arrow_pub)
 {
+  visualization_msgs::Marker marker;
+  marker.header.frame_id = "t265_odom_frame";
+  marker.header.stamp = ros::Time();
+    
+  marker.type = visualization_msgs::Marker::CUBE;
+  marker.action = visualization_msgs::Marker::ADD;
+  marker.scale.x = 0.1;
+  marker.scale.y = 0.1;
+  marker.scale.z = 0.1;
+  marker.color.a = 1.0; // Don't forget to set the alpha!
+  marker.color.r = 1.0;
+  marker.color.g = 0.0;
+  marker.mesh_resource = "package://pr2_description/meshes/base_v0/base.dae";
+
+  int cntr = 0;
   //std::cin.get();
   ROS_INFO("Finding path...");
  
@@ -120,18 +138,21 @@ bool a_start(const node start, const node goal, grid_map::GridMap &map, ros::Pub
                     {0, 1}, {0, -1}, {1, 0}, {-1, 0}};
 
   open_list.push_back(start);
-
+  ros::Time time;
   while(open_list.size() && ros::ok())
-  {
-    //std::cin.get();
-    
-    //ROS_INFO("Looping!");
+  {    
     std::sort(open_list.begin(), open_list.end(), node_sort);
-  
+
     node *current = new node(open_list[0]);
+    
+    marker.id = ++cntr;
+    marker.pose.position.x = current->position.x();
+    marker.pose.position.y = current->position.y();
+    marker.pose.position.z = current->height;
+
+    // arrow_pub.publish(marker);
 
     open_list.pop_front();
-
     closed_list.push_back(*current);
 
     if(current->index(0) == goal.index(0) && current->index(1) == goal.index(1)) // Index has been choosen instead of position to avoid comparing floats
@@ -147,19 +168,18 @@ bool a_start(const node start, const node goal, grid_map::GridMap &map, ros::Pub
     for(auto c:children)
     {
       grid_map::Index temp_pos(current->index(0)+c(0), current->index(1)+c(1));
+      node child = node(temp_pos, map);
       
-      if(map.isValid(temp_pos)) // Checking if the index is within the map
-      {
-        node child = node(temp_pos, map);
-        
-        int pos_in_list = is_in_list(closed_list, child);
-        if(pos_in_list == -1)
-        {
+      int pos_in_list = is_in_list(closed_list, child);
+  
+      if(map.isValid(temp_pos) && pos_in_list == -1) // Checking if the index is within the map
+      {  
           child.calc_f(current, goal);
+          
           pos_in_list = is_in_list(open_list, child);
+          
           if(pos_in_list == -1 || (pos_in_list >= 0 && open_list[pos_in_list].g > child.g))
             open_list.push_back(child);
-        }
       }
     }
   }
@@ -174,14 +194,26 @@ void mapCallback(ros::Publisher &plan_pub, ros::Publisher &arrow_pub, const grid
   grid_map::GridMap gridMap;
   const grid_map_msgs::GridMap map_msg = *map_msg_ptr;
   visualization_msgs::Marker marker;
-  double start_x, start_y, goal_x, goal_y;
   grid_map::Position pos;
 
   grid_map::GridMapRosConverter::fromMessage(map_msg, gridMap);
 
+  tf::TransformListener listener;
+  tf::StampedTransform transform;
+  listener.waitForTransform("/t265_odom_frame", "/base_link", ros::Time(0), ros::Duration(10.0));
+  listener.lookupTransform("/t265_odom_frame", "/base_link",ros::Time(0), transform);
+    
+  pos(0) = transform.getOrigin().x();
+  pos(1) = transform.getOrigin().y();
+  node start(pos, gridMap);
+  
+  std::cout << "Enter goal: \n";
+  std::cin >> pos(0) >> pos(1);
+
+  node goal(pos, gridMap);
+
   marker.header.frame_id = "t265_odom_frame";
   marker.header.stamp = ros::Time();
-  
   marker.type = visualization_msgs::Marker::ARROW;
   marker.action = visualization_msgs::Marker::ADD;
   marker.scale.x = 0.8;
@@ -189,35 +221,19 @@ void mapCallback(ros::Publisher &plan_pub, ros::Publisher &arrow_pub, const grid
   marker.scale.z = 0.1;
   marker.color.a = 1.0; // Don't forget to set the alpha!
   marker.mesh_resource = "package://pr2_description/meshes/base_v0/base.dae";
-
-  std::cout << "Enter start & goal: \n";
-  std::cin  >> start_x >> start_y >> goal_x >> goal_y;
-    
-  pos(0) = start_x;
-  pos(1) = start_y;
-  node start(pos, gridMap);
-  
   marker.id = 0;
-  marker.pose.position.x = start_x;
-  marker.pose.position.y = start_y;
-  marker.color.r = 1.0;
-  marker.color.g = 0.0;
-
-  arrow_pub.publish(marker);
-  
-  pos(0) = goal_x;
-  pos(1) = goal_y;
-  node goal(pos, gridMap);
-
-  marker.id = 1;
-  marker.pose.position.x = goal_x;
-  marker.pose.position.y = goal_y;
+  marker.pose.position.x = pos(0);
+  marker.pose.position.y = pos(1);
+  marker.pose.position.z = goal.height;
   marker.color.r = 0.0;
   marker.color.g = 1.0;
 
   arrow_pub.publish(marker);
 
-  a_start(start, goal, gridMap, plan_pub);
+  ros::Time time;
+  time = ros::Time::now();
+  a_start(start, goal, gridMap, plan_pub, arrow_pub);
+  ROS_INFO("Total time: %f", (ros::Time::now()-time).toSec());
 }
 
 
@@ -236,6 +252,11 @@ int main(int argc, char **argv)
       1000, boost::bind(&mapCallback, boost::ref(plan_pub), boost::ref(marker_pub) , _1));
   
   ROS_INFO("LOL Started...");
+
+  
+
+ 
+
   ros::spin();
 
   return 0;
