@@ -1,0 +1,7 @@
+<library path="/lib/libplanner_3d">
+  <class name="planner_3d/Planner3D" type="planner_3d::Planner3D" base_class_type="nav_core::BaseGlobalPlanner">
+    <description>
+      A* 3D planner
+    </description>
+  </class>
+</library>

@@ -1,0 +1,23 @@
+global_frame: t265_odom_frame
+robot_base_frame: base_link
+update_frequency: 5.0
+publish_frequency: 5.0
+rolling_window: true
+width: 5
+height: 5
+transform_tolerance: 2
+footprint:
+  [[-0.45, -0.375], [0.45, -0.375], [0.45, 0.375], [-0.45, 0.375]]
+
+# plugins:
+#   - { name: static, type: "costmap_2d::StaticLayer" }
+#   - { name: inflation, type: "costmap_2d::InflationLayer" }
+#   # - {name: obstacles, type: "costmap_2d::obstacles"}
+
+# inflation:
+#   inflation_radius: 0.55
+
+# static:
+#   map_topic: /projected_map_2D
+#   lethal_cost_threshold: 100
+#   subscribe_to_updates: true
