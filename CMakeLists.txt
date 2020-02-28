@@ -10,7 +10,7 @@ find_package(catkin REQUIRED COMPONENTS
   grid_map_ros
   roscpp
   rviz
-
+  base_local_planner
   costmap_2d
   nav_core
   pluginlib
