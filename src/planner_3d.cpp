@@ -108,12 +108,50 @@ int is_in_list(std::deque<node> list, node cell)
 namespace planner_3d
 {
 grid_map::GridMap map;
+grid_map_msgs::GridMap grid_map_message;
+ros::Publisher grid_map_publisher;
 
-void mapCallback(const grid_map_msgs::GridMap::ConstPtr &map_msg_ptr)
+void mapCallback(const octomap_msgs::Octomap::ConstPtr &ocotomap_msg_ptr)
 {
-    const grid_map_msgs::GridMap map_msg = *map_msg_ptr;
-    grid_map::GridMapRosConverter::fromMessage(map_msg, map);
-    ROS_WARN("New grid_map received");
+    ROS_INFO("New grid_map received");
+    octomap::OcTree *octomap = nullptr;
+    octomap_msgs::Octomap ocotomap_msg = *ocotomap_msg_ptr;
+    octomap::AbstractOcTree *tree = octomap_msgs::msgToMap(ocotomap_msg);
+
+    if (tree)
+        octomap = dynamic_cast<octomap::OcTree *>(tree);
+    else
+    {
+        ROS_ERROR("Failed to call convert Octomap.");
+        return;
+    }
+
+    grid_map::Position3 min_bound;
+    grid_map::Position3 max_bound;
+    octomap->getMetricMin(min_bound(0), min_bound(1), min_bound(2));
+    octomap->getMetricMax(max_bound(0), max_bound(1), max_bound(2));
+
+    // min_bound(0) = -40; // min x
+    // max_bound(0) = 40; // max x
+    // min_bound(1) = -40; // min y
+    // max_bound(1) = 40; // max y
+    // min_bound(2) = -2; // min z
+    // max_bound(2) = 2; // max z
+
+    bool res = grid_map::GridMapOctomapConverter::fromOctomap(*octomap, "elevation", map, &min_bound, &max_bound);
+    
+    if (res)
+    {
+        map.setFrameId(ocotomap_msg.header.frame_id);
+        grid_map::GridMapRosConverter::toMessage(map, grid_map_message);
+        grid_map_publisher.publish(grid_map_message);
+        ROS_INFO("Octomap converted to grid_map");
+    }
+    else
+    {
+        ROS_ERROR("Failed to call convert Octomap.");
+        return;
+    }
 }
 
 Planner3D::Planner3D() { ROS_WARN("Initialised!"); }
@@ -130,8 +168,15 @@ void Planner3D::initialize(std::string name, costmap_2d::Costmap2DROS *costmap_r
     n = ros::NodeHandle("~/" + name);
 
     marker_pub = n.advertise<visualization_msgs::Marker>("points_visualization", 0);
+    grid_map_publisher = n.advertise<grid_map_msgs::GridMap>("empty_grid_map", 0);
+    octomap_sub = n.subscribe<octomap_msgs::Octomap>("/octomap_full", 10, mapCallback);
 
-    sub = n.subscribe<grid_map_msgs::GridMap>("/octomap_to_gridmap_demo/grid_map", 1000, mapCallback);
+    // grid_map::Matrix empty_world = grid_map::Matrix::Constant(800, 800, 0);
+    // full_map.setFrameId("t265_odom_frame");
+    // full_map.setGeometry(grid_map::Length(80, 80), 0.1, grid_map::Position::Zero());
+    // full_map.add("elevation", empty_world);
+    // std::cout << full_map["elevation"];
+    // grid_map::GridMapRosConverter::toMessage(full_map, grid_map_message);
 
     marker.header.stamp = ros::Time();
     marker.header.frame_id = "t265_odom_frame";
@@ -151,7 +196,7 @@ bool Planner3D::makePlan(const geometry_msgs::PoseStamped &start, const geometry
 {
     //marker.type = visualization_msgs::Marker::DELETEALL;
     //arrow_pub.publish(marker);
-
+    // map["elevation"] += full_map["elevation"];
     ros::Time time;
     time = ros::Time::now();
 
