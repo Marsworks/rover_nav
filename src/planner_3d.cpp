@@ -16,6 +16,8 @@ struct node
 
     node *parent_node = NULL;
 
+    node(){}
+
     node(grid_map::Position pos, const grid_map::GridMap &map)
     {
         position = pos;
@@ -139,7 +141,7 @@ void mapCallback(const octomap_msgs::Octomap::ConstPtr &ocotomap_msg_ptr)
     // max_bound(2) = 2; // max z
 
     bool res = grid_map::GridMapOctomapConverter::fromOctomap(*octomap, "elevation", map, &min_bound, &max_bound);
-    
+
     if (res)
     {
         map.setFrameId(ocotomap_msg.header.frame_id);
@@ -194,24 +196,35 @@ void Planner3D::initialize(std::string name, costmap_2d::Costmap2DROS *costmap_r
 
 bool Planner3D::makePlan(const geometry_msgs::PoseStamped &start, const geometry_msgs::PoseStamped &goal, std::vector<geometry_msgs::PoseStamped> &plan)
 {
-    //marker.type = visualization_msgs::Marker::DELETEALL;
-    //arrow_pub.publish(marker);
+    ROS_INFO("Finding path...");
+    // marker.type = visualization_msgs::Marker::DELETEALL;
+    // arrow_pub.publish(marker);
     // map["elevation"] += full_map["elevation"];
     ros::Time time;
     time = ros::Time::now();
 
     int cntr = 0;
-    ROS_WARN("Finding path...");
 
-    grid_map::Position pos_vector;
+    grid_map::Position pos;
+    node start_pos, goal_pos;
 
-    pos_vector(0) = start.pose.position.x;
-    pos_vector(1) = start.pose.position.y;
-    node start_pos(pos_vector, map);
+    pos = grid_map::Position(start.pose.position.x, start.pose.position.y);
+    if (map.isInside(pos))
+        start_pos = node(pos, map);
+    else
+    {
+        ROS_WARN("Robot starting pose is outside of the map, can't find a path");
+        return false;
+    }
 
-    pos_vector(0) = goal.pose.position.x;
-    pos_vector(1) = goal.pose.position.y;
-    node goal_pos(pos_vector, map);
+    pos = grid_map::Position(goal.pose.position.x, goal.pose.position.y);
+    if(map.isInside(pos))
+        goal_pos = node(pos, map);
+    else
+    {
+        ROS_WARN("Goal pose is outside of the map, can't find a path");
+        return false;
+    }
 
     std::deque<node> open_list, closed_list;
 
