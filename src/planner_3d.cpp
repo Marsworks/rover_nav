@@ -109,7 +109,7 @@ int is_in_list(std::deque<node> list, node cell)
 //Default Constructor
 namespace planner_3d
 {
-grid_map::GridMap map;
+grid_map::GridMap map,init_map;
 grid_map_msgs::GridMap grid_map_message;
 ros::Publisher grid_map_publisher;
 
@@ -145,6 +145,8 @@ void mapCallback(const octomap_msgs::Octomap::ConstPtr &ocotomap_msg_ptr)
     if (res)
     {
         map.setFrameId(ocotomap_msg.header.frame_id);
+        map.addDataFrom(init_map, true, false, "elevation");
+        
         grid_map::GridMapRosConverter::toMessage(map, grid_map_message);
         grid_map_publisher.publish(grid_map_message);
         ROS_INFO("Octomap converted to grid_map");
@@ -168,17 +170,19 @@ void Planner3D::initialize(std::string name, costmap_2d::Costmap2DROS *costmap_r
     ROS_INFO("Initiallising...");
 
     n = ros::NodeHandle("~/" + name);
+    
+    // todo; chnage 0.63 to the actual height of the robot, should be zero in theory
+    grid_map::Matrix empty_world = grid_map::Matrix::Constant(30, 30, 0.63);
+    init_map.setFrameId("t265_odom_frame");
+    init_map.setGeometry(grid_map::Length(3, 3), 0.1, grid_map::Position::Zero());
+    init_map.add("elevation", empty_world);
+    // std::cout << init_map["elevation"];
 
     marker_pub = n.advertise<visualization_msgs::Marker>("points_visualization", 0);
     grid_map_publisher = n.advertise<grid_map_msgs::GridMap>("empty_grid_map", 0);
     octomap_sub = n.subscribe<octomap_msgs::Octomap>("/octomap_full", 10, mapCallback);
 
-    // grid_map::Matrix empty_world = grid_map::Matrix::Constant(800, 800, 0);
-    // full_map.setFrameId("t265_odom_frame");
-    // full_map.setGeometry(grid_map::Length(80, 80), 0.1, grid_map::Position::Zero());
-    // full_map.add("elevation", empty_world);
-    // std::cout << full_map["elevation"];
-    // grid_map::GridMapRosConverter::toMessage(full_map, grid_map_message);
+    // grid_map::GridMapRosConverter::toMessage(init_map, grid_map_message);
 
     marker.header.stamp = ros::Time();
     marker.header.frame_id = "t265_odom_frame";
