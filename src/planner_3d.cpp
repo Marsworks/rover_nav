@@ -16,7 +16,7 @@ struct node
 
     node *parent_node = NULL;
 
-    node(){}
+    node() {}
 
     node(grid_map::Position pos, const grid_map::GridMap &map)
     {
@@ -65,7 +65,7 @@ struct node
     }
 };
 
-bool send_path(node *cell, node start, const geometry_msgs::PoseStamped &goal, std::vector<geometry_msgs::PoseStamped> &poses_list)
+bool get_path(node *cell, node start, const geometry_msgs::PoseStamped &goal, std::vector<geometry_msgs::PoseStamped> &poses_list)
 {
     geometry_msgs::PoseStamped temp_pos = goal;
     tf2::Quaternion goal_quat;
@@ -109,11 +109,7 @@ int is_in_list(std::deque<node> list, node cell)
 //Default Constructor
 namespace planner_3d
 {
-grid_map::GridMap map,init_map;
-grid_map_msgs::GridMap grid_map_message;
-ros::Publisher grid_map_publisher;
-
-void mapCallback(const octomap_msgs::Octomap::ConstPtr &ocotomap_msg_ptr)
+void Planner3D::mapCallback(const octomap_msgs::Octomap::ConstPtr &ocotomap_msg_ptr)
 {
     ROS_INFO("New grid_map received");
     octomap::OcTree *octomap = nullptr;
@@ -140,14 +136,18 @@ void mapCallback(const octomap_msgs::Octomap::ConstPtr &ocotomap_msg_ptr)
     // min_bound(2) = -2; // min z
     // max_bound(2) = 2; // max z
 
-    bool res = grid_map::GridMapOctomapConverter::fromOctomap(*octomap, "elevation", map, &min_bound, &max_bound);
+    bool res = grid_map::GridMapOctomapConverter::fromOctomap(*octomap, "elevation", raw_gridmap, &min_bound, &max_bound);
 
     if (res)
     {
-        map.setFrameId(ocotomap_msg.header.frame_id);
-        map.addDataFrom(init_map, true, false, "elevation");
-        
-        grid_map::GridMapRosConverter::toMessage(map, grid_map_message);
+        raw_gridmap.setFrameId(ocotomap_msg.header.frame_id);
+        // map.addDataFrom(init_map, true, false, "elevation");
+
+        grid_map::GridMapRosConverter::toMessage(raw_gridmap, grid_map_message);
+        grid_map_publisher.publish(grid_map_message);
+
+        full_gridmap.addDataFrom(raw_gridmap, false, true, "elevation");
+        grid_map::GridMapRosConverter::toMessage(full_gridmap, grid_map_message);
         grid_map_publisher.publish(grid_map_message);
         ROS_INFO("Octomap converted to grid_map");
     }
@@ -170,19 +170,12 @@ void Planner3D::initialize(std::string name, costmap_2d::Costmap2DROS *costmap_r
     ROS_INFO("Initiallising...");
 
     n = ros::NodeHandle("~/" + name);
-    
-    // todo; chnage 0.63 to the actual height of the robot, should be zero in theory
-    grid_map::Matrix empty_world = grid_map::Matrix::Constant(30, 30, 0.63);
-    init_map.setFrameId("t265_odom_frame");
-    init_map.setGeometry(grid_map::Length(3, 3), 0.1, grid_map::Position::Zero());
-    init_map.add("elevation", empty_world);
-    // std::cout << init_map["elevation"];
 
-    marker_pub = n.advertise<visualization_msgs::Marker>("points_visualization", 0);
-    grid_map_publisher = n.advertise<grid_map_msgs::GridMap>("empty_grid_map", 0);
-    octomap_sub = n.subscribe<octomap_msgs::Octomap>("/octomap_full", 10, mapCallback);
-
-    // grid_map::GridMapRosConverter::toMessage(init_map, grid_map_message);
+    marker_publisher = n.advertise<visualization_msgs::Marker>("points_visualization", 0);
+    grid_map_publisher = n.advertise<grid_map_msgs::GridMap>("ocotomap_2_gridmap", 0);
+    full_map_publisher = n.advertise<grid_map_msgs::GridMap>("full_gridmap", 0);
+    filtered_map_publisher = n.advertise<grid_map_msgs::GridMap>("filtered_gridmap", 0);
+    octomap_sub = n.subscribe<octomap_msgs::Octomap>("/octomap_full", 10, &Planner3D::mapCallback, this);
 
     marker.header.stamp = ros::Time();
     marker.header.frame_id = "t265_odom_frame";
@@ -195,6 +188,18 @@ void Planner3D::initialize(std::string name, costmap_2d::Costmap2DROS *costmap_r
     marker.color.r = 1.0;
     marker.mesh_resource = "package://pr2_description/meshes/base_v0/base.dae";
 
+    // todo; change 0.63 to the actual height of the robot, should be zero in theory
+    // grid_map::Matrix empty_world = grid_map::Matrix::Constant(30, 30, 0.63);
+    // init_map.setFrameId("t265_odom_frame");
+    // init_map.setGeometry(grid_map::Length(3, 3), 0.1, grid_map::Position::Zero());
+    // init_map.add("elevation", empty_world);
+    // std::cout << init_map["elevation"];
+
+    full_gridmap.setFrameId("t265_odom_frame");
+    full_gridmap.setGeometry(grid_map::Length(40, 80), 0.1, grid_map::Position::Zero());
+    full_gridmap.add("elevation", grid_map::Matrix::Constant(400, 800, 0));
+    // std::cout << full_gridmap["elevation"];
+
     ROS_INFO("planner_3D Initiallised");
 }
 
@@ -203,7 +208,7 @@ bool Planner3D::makePlan(const geometry_msgs::PoseStamped &start, const geometry
     ROS_INFO("Finding path...");
     // marker.type = visualization_msgs::Marker::DELETEALL;
     // arrow_pub.publish(marker);
-    // map["elevation"] += full_map["elevation"];
+    // map["elevation"] += full_gridmap["elevation"];
     ros::Time time;
     time = ros::Time::now();
 
@@ -213,8 +218,8 @@ bool Planner3D::makePlan(const geometry_msgs::PoseStamped &start, const geometry
     node start_pos, goal_pos;
 
     pos = grid_map::Position(start.pose.position.x, start.pose.position.y);
-    if (map.isInside(pos))
-        start_pos = node(pos, map);
+    if (full_gridmap.isInside(pos))
+        start_pos = node(pos, full_gridmap);
     else
     {
         ROS_WARN("Robot starting pose is outside of the map, can't find a path");
@@ -222,8 +227,8 @@ bool Planner3D::makePlan(const geometry_msgs::PoseStamped &start, const geometry
     }
 
     pos = grid_map::Position(goal.pose.position.x, goal.pose.position.y);
-    if(map.isInside(pos))
-        goal_pos = node(pos, map);
+    if (full_gridmap.isInside(pos))
+        goal_pos = node(pos, full_gridmap);
     else
     {
         ROS_WARN("Goal pose is outside of the map, can't find a path");
@@ -245,7 +250,7 @@ bool Planner3D::makePlan(const geometry_msgs::PoseStamped &start, const geometry
         marker.pose.position.y = current->position.y();
         marker.pose.position.z = current->height;
 
-        marker_pub.publish(marker);
+        marker_publisher.publish(marker);
 
         open_list.pop_front();
         closed_list.push_back(*current);
@@ -254,7 +259,7 @@ bool Planner3D::makePlan(const geometry_msgs::PoseStamped &start, const geometry
         {
             ROS_INFO("Plan found");
 
-            if (send_path(current, start_pos, goal, plan))
+            if (get_path(current, start_pos, goal, plan))
             {
                 ROS_INFO("Plan published");
                 ROS_INFO("Total time: %f", (ros::Time::now() - time).toSec());
@@ -265,11 +270,11 @@ bool Planner3D::makePlan(const geometry_msgs::PoseStamped &start, const geometry
         for (auto c : children)
         {
             grid_map::Index temp_pos(current->index(0) + c(0), current->index(1) + c(1));
-            node child = node(temp_pos, map);
+            node child = node(temp_pos, full_gridmap);
 
             int pos_in_list = is_in_list(closed_list, child);
 
-            if (map.isValid(temp_pos) && pos_in_list == -1) // Checking if the index is within the map
+            if (full_gridmap.isValid(temp_pos) && pos_in_list == -1) // Checking if the index is within the map
             {
                 child.calc_f(current, goal_pos);
 
