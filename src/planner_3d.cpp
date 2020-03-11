@@ -109,11 +109,11 @@ int is_in_list(std::deque<node> list, node cell)
 //Default Constructor
 namespace planner_3d
 {
-void Planner3D::mapCallback(const octomap_msgs::Octomap::ConstPtr &ocotomap_msg_ptr)
+void Planner3D::mapCallback(const octomap_msgs::Octomap &ocotomap_msg)
 {
     ROS_INFO("New grid_map received");
     octomap::OcTree *octomap = nullptr;
-    octomap_msgs::Octomap ocotomap_msg = *ocotomap_msg_ptr;
+    // octomap_msgs::Octomap ocotomap_msg = *ocotomap_msg_ptr;
     octomap::AbstractOcTree *tree = octomap_msgs::msgToMap(ocotomap_msg);
 
     if (tree)
@@ -175,7 +175,8 @@ void Planner3D::initialize(std::string name, costmap_2d::Costmap2DROS *costmap_r
     grid_map_publisher = n.advertise<grid_map_msgs::GridMap>("ocotomap_2_gridmap", 0);
     full_map_publisher = n.advertise<grid_map_msgs::GridMap>("full_gridmap", 0);
     filtered_map_publisher = n.advertise<grid_map_msgs::GridMap>("filtered_gridmap", 0);
-    octomap_sub = n.subscribe<octomap_msgs::Octomap>("/octomap_full", 10, &Planner3D::mapCallback, this);
+    
+    client = n.serviceClient<octomap_msgs::GetOctomap>("/octomap_full");
 
     marker.header.stamp = ros::Time();
     marker.header.frame_id = "t265_odom_frame";
@@ -206,6 +207,15 @@ void Planner3D::initialize(std::string name, costmap_2d::Costmap2DROS *costmap_r
 bool Planner3D::makePlan(const geometry_msgs::PoseStamped &start, const geometry_msgs::PoseStamped &goal, std::vector<geometry_msgs::PoseStamped> &plan)
 {
     ROS_INFO("Finding path...");
+
+    octomap_msgs::GetOctomap srv;
+    if (client.call(srv)) 
+        Planner3D::mapCallback(srv.response.map);
+    else
+    {
+        ROS_WARN("Failed to call Octomap service: ");
+        return false;
+    }
     // marker.type = visualization_msgs::Marker::DELETEALL;
     // arrow_pub.publish(marker);
     // map["elevation"] += full_gridmap["elevation"];
