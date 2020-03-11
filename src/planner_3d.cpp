@@ -146,9 +146,7 @@ void Planner3D::mapCallback(const octomap_msgs::Octomap &ocotomap_msg)
         grid_map::GridMapRosConverter::toMessage(raw_gridmap, grid_map_message);
         grid_map_publisher.publish(grid_map_message);
 
-        full_gridmap.addDataFrom(raw_gridmap, false, true, "elevation");
-        grid_map::GridMapRosConverter::toMessage(full_gridmap, grid_map_message);
-        grid_map_publisher.publish(grid_map_message);
+        // full_gridmap.addDataFrom(raw_gridmap, false, true, "elevation");
         ROS_INFO("Octomap converted to grid_map");
     }
     else
@@ -171,11 +169,11 @@ void Planner3D::initialize(std::string name, costmap_2d::Costmap2DROS *costmap_r
 
     n = ros::NodeHandle("~/" + name);
 
-    marker_publisher = n.advertise<visualization_msgs::Marker>("points_visualization", 0);
+    marker_publisher = n.advertise<visualization_msgs::Marker>("explored_cells", 0);
     grid_map_publisher = n.advertise<grid_map_msgs::GridMap>("ocotomap_2_gridmap", 0);
     full_map_publisher = n.advertise<grid_map_msgs::GridMap>("full_gridmap", 0);
     filtered_map_publisher = n.advertise<grid_map_msgs::GridMap>("filtered_gridmap", 0);
-    
+
     client = n.serviceClient<octomap_msgs::GetOctomap>("/octomap_full");
 
     marker.header.stamp = ros::Time();
@@ -206,30 +204,40 @@ void Planner3D::initialize(std::string name, costmap_2d::Costmap2DROS *costmap_r
 
 bool Planner3D::makePlan(const geometry_msgs::PoseStamped &start, const geometry_msgs::PoseStamped &goal, std::vector<geometry_msgs::PoseStamped> &plan)
 {
+    // Used to track the planner execution time
+    ros::Time time;
+    time = ros::Time::now();
+
     ROS_INFO("Finding path...");
 
-    octomap_msgs::GetOctomap srv;
-    if (client.call(srv)) 
+    grid_map::GridMapRosConverter::toMessage(full_gridmap, grid_map_message);
+    // full_map_publisher.publish(grid_map_message);
+
+    // Clear all the existing markers from the previous path
+    // marker.type = visualization_msgs::Marker::DELETEALL;
+    // marker_publisher.publish(marker);
+
+    // Get the ocotomap from the octomap_server
+    if (client.call(srv))
         Planner3D::mapCallback(srv.response.map);
     else
     {
         ROS_WARN("Failed to call Octomap service: ");
         return false;
     }
-    // marker.type = visualization_msgs::Marker::DELETEALL;
-    // arrow_pub.publish(marker);
+
     // map["elevation"] += full_gridmap["elevation"];
-    ros::Time time;
-    time = ros::Time::now();
 
     int cntr = 0;
 
+    // gridmap to use for finding the path
+    grid_map::GridMap &search_gridmap = raw_gridmap;
     grid_map::Position pos;
     node start_pos, goal_pos;
 
     pos = grid_map::Position(start.pose.position.x, start.pose.position.y);
-    if (full_gridmap.isInside(pos))
-        start_pos = node(pos, full_gridmap);
+    if (search_gridmap.isInside(pos))
+        start_pos = node(pos, search_gridmap);
     else
     {
         ROS_WARN("Robot starting pose is outside of the map, can't find a path");
@@ -237,8 +245,8 @@ bool Planner3D::makePlan(const geometry_msgs::PoseStamped &start, const geometry
     }
 
     pos = grid_map::Position(goal.pose.position.x, goal.pose.position.y);
-    if (full_gridmap.isInside(pos))
-        goal_pos = node(pos, full_gridmap);
+    if (search_gridmap.isInside(pos))
+        goal_pos = node(pos, search_gridmap);
     else
     {
         ROS_WARN("Goal pose is outside of the map, can't find a path");
@@ -280,11 +288,11 @@ bool Planner3D::makePlan(const geometry_msgs::PoseStamped &start, const geometry
         for (auto c : children)
         {
             grid_map::Index temp_pos(current->index(0) + c(0), current->index(1) + c(1));
-            node child = node(temp_pos, full_gridmap);
+            node child = node(temp_pos, search_gridmap);
 
             int pos_in_list = is_in_list(closed_list, child);
 
-            if (full_gridmap.isValid(temp_pos) && pos_in_list == -1) // Checking if the index is within the map
+            if (search_gridmap.isValid(temp_pos) && pos_in_list == -1) // Checking if the index is within the map
             {
                 child.calc_f(current, goal_pos);
 
