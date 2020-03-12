@@ -42,9 +42,7 @@ struct node
             height = (std::isfinite(height)) ? height : 0;
         }
         else
-        {
             height = 0;
-        }
     }
 
     node(grid_map::Index ind)
@@ -84,8 +82,6 @@ bool get_path(node *cell, node start, const geometry_msgs::PoseStamped &goal, st
         temp_pos.pose.orientation.z = goal_quat.z();
         temp_pos.pose.orientation.w = goal_quat.w();
 
-        // ROS_INFO("Current point, %f %f", cell->position(0), cell->position(1));
-
         poses_list.push_back(temp_pos);
         cell = cell->parent_node;
     }
@@ -109,53 +105,6 @@ int is_in_list(std::deque<node> list, node cell)
 //Default Constructor
 namespace planner_3d
 {
-void Planner3D::mapCallback(const octomap_msgs::Octomap &ocotomap_msg)
-{
-    ROS_INFO("New grid_map received");
-    octomap::OcTree *octomap = nullptr;
-    // octomap_msgs::Octomap ocotomap_msg = *ocotomap_msg_ptr;
-    octomap::AbstractOcTree *tree = octomap_msgs::msgToMap(ocotomap_msg);
-
-    if (tree)
-        octomap = dynamic_cast<octomap::OcTree *>(tree);
-    else
-    {
-        ROS_ERROR("Failed to call convert Octomap.");
-        return;
-    }
-
-    grid_map::Position3 min_bound;
-    grid_map::Position3 max_bound;
-    octomap->getMetricMin(min_bound(0), min_bound(1), min_bound(2));
-    octomap->getMetricMax(max_bound(0), max_bound(1), max_bound(2));
-
-    // min_bound(0) = -40; // min x
-    // max_bound(0) = 40; // max x
-    // min_bound(1) = -40; // min y
-    // max_bound(1) = 40; // max y
-    // min_bound(2) = -2; // min z
-    // max_bound(2) = 2; // max z
-
-    bool res = grid_map::GridMapOctomapConverter::fromOctomap(*octomap, "elevation", raw_gridmap, &min_bound, &max_bound);
-
-    if (res)
-    {
-        raw_gridmap.setFrameId(ocotomap_msg.header.frame_id);
-        // map.addDataFrom(init_map, true, false, "elevation");
-
-        grid_map::GridMapRosConverter::toMessage(raw_gridmap, grid_map_message);
-        grid_map_publisher.publish(grid_map_message);
-
-        // full_gridmap.addDataFrom(raw_gridmap, false, true, "elevation");
-        ROS_INFO("Octomap converted to grid_map");
-    }
-    else
-    {
-        ROS_ERROR("Failed to call convert Octomap.");
-        return;
-    }
-}
-
 Planner3D::Planner3D() { ROS_WARN("Initialised!"); }
 
 Planner3D::Planner3D(std::string name, costmap_2d::Costmap2DROS *costmap_ros)
@@ -175,6 +124,11 @@ void Planner3D::initialize(std::string name, costmap_2d::Costmap2DROS *costmap_r
     filtered_map_publisher = n.advertise<grid_map_msgs::GridMap>("filtered_gridmap", 0);
 
     client = n.serviceClient<octomap_msgs::GetOctomap>("/octomap_full");
+    
+    full_gridmap.setGeometry(grid_map::Length(40, 80), 0.1, grid_map::Position::Zero());
+    full_gridmap.add("elevation", grid_map::Matrix::Constant(400, 800, 0.63));
+    full_gridmap.setBasicLayers({"elevation"});
+    full_gridmap.setFrameId("t265_odom_frame");
 
     marker.header.stamp = ros::Time();
     marker.header.frame_id = "t265_odom_frame";
@@ -187,19 +141,53 @@ void Planner3D::initialize(std::string name, costmap_2d::Costmap2DROS *costmap_r
     marker.color.r = 1.0;
     marker.mesh_resource = "package://pr2_description/meshes/base_v0/base.dae";
 
-    // todo; change 0.63 to the actual height of the robot, should be zero in theory
-    // grid_map::Matrix empty_world = grid_map::Matrix::Constant(30, 30, 0.63);
-    // init_map.setFrameId("t265_odom_frame");
-    // init_map.setGeometry(grid_map::Length(3, 3), 0.1, grid_map::Position::Zero());
-    // init_map.add("elevation", empty_world);
-    // std::cout << init_map["elevation"];
-
-    full_gridmap.setFrameId("t265_odom_frame");
-    full_gridmap.setGeometry(grid_map::Length(40, 80), 0.1, grid_map::Position::Zero());
-    full_gridmap.add("elevation", grid_map::Matrix::Constant(400, 800, 0));
-    // std::cout << full_gridmap["elevation"];
-
     ROS_INFO("planner_3D Initiallised");
+}
+
+void Planner3D::mapCallback(const octomap_msgs::Octomap &ocotomap_msg)
+{
+    ROS_INFO("New grid_map received");
+
+    octomap::OcTree *octomap = nullptr;
+    octomap::AbstractOcTree *tree = octomap_msgs::msgToMap(ocotomap_msg);
+
+    if (tree)
+        octomap = dynamic_cast<octomap::OcTree *>(tree);
+    else
+    {
+        ROS_ERROR("Failed to call convert Octomap.");
+        return;
+    }
+
+    grid_map::Position3 min_bound;
+    grid_map::Position3 max_bound;
+
+    octomap->getMetricMin(min_bound(0), min_bound(1), min_bound(2));
+    octomap->getMetricMax(max_bound(0), max_bound(1), max_bound(2));
+
+    // min_bound(0) = -40; // min x
+    // max_bound(0) = 40; // max x
+    // min_bound(1) = -40; // min y
+    // max_bound(1) = 40; // max y
+    // min_bound(2) = -2; // min z
+    // max_bound(2) = 2; // max z
+
+    bool ret = grid_map::GridMapOctomapConverter::fromOctomap(*octomap, "elevation", raw_gridmap, &min_bound, &max_bound);
+
+    if (ret)
+    {
+        raw_gridmap.setFrameId(ocotomap_msg.header.frame_id);
+
+        grid_map::GridMapRosConverter::toMessage(raw_gridmap, grid_map_message);
+        grid_map_publisher.publish(grid_map_message);
+
+        ROS_INFO("Octomap converted to grid_map");
+    }
+    else
+    {
+        ROS_ERROR("Failed to call convert Octomap.");
+        return;
+    }
 }
 
 bool Planner3D::makePlan(const geometry_msgs::PoseStamped &start, const geometry_msgs::PoseStamped &goal, std::vector<geometry_msgs::PoseStamped> &plan)
@@ -210,29 +198,40 @@ bool Planner3D::makePlan(const geometry_msgs::PoseStamped &start, const geometry
 
     ROS_INFO("Finding path...");
 
-    grid_map::GridMapRosConverter::toMessage(full_gridmap, grid_map_message);
-    // full_map_publisher.publish(grid_map_message);
-
     // Clear all the existing markers from the previous path
-    // marker.type = visualization_msgs::Marker::DELETEALL;
-    // marker_publisher.publish(marker);
+    marker.type = visualization_msgs::Marker::DELETEALL;
+    marker_publisher.publish(marker);
 
     // Get the ocotomap from the octomap_server
     if (client.call(srv))
         Planner3D::mapCallback(srv.response.map);
     else
     {
-        ROS_WARN("Failed to call Octomap service: ");
+        ROS_ERROR("Failed to call Octomap service: ");
         return false;
     }
 
-    // map["elevation"] += full_gridmap["elevation"];
+    ROS_INFO("Adding raw_gridmap to full_gridmap...");
+    // The function below is modified to speedup the data copying 
+    bool ret = full_gridmap.addDataFrom(raw_gridmap, false, true, "elevation");
+    if (ret)
+    {
+        ROS_INFO("Added!");
+        // grid_map::GridMapRosConverter::toMessage(full_gridmap, grid_map_message);
+        // full_map_publisher.publish(grid_map_message);
+    }
+    else
+    {
+        ROS_ERROR("Failed");
+        return false;
+    }
 
     int cntr = 0;
 
     // gridmap to use for finding the path
-    grid_map::GridMap &search_gridmap = raw_gridmap;
+    grid_map::GridMap &search_gridmap = full_gridmap;
     grid_map::Position pos;
+
     node start_pos, goal_pos;
 
     pos = grid_map::Position(start.pose.position.x, start.pose.position.y);
@@ -287,12 +286,12 @@ bool Planner3D::makePlan(const geometry_msgs::PoseStamped &start, const geometry
 
         for (auto c : children)
         {
-            grid_map::Index temp_pos(current->index(0) + c(0), current->index(1) + c(1));
-            node child = node(temp_pos, search_gridmap);
+            grid_map::Index temp_index(current->index(0) + c(0), current->index(1) + c(1));
+            node child = node(temp_index, search_gridmap);
 
             int pos_in_list = is_in_list(closed_list, child);
 
-            if (search_gridmap.isValid(temp_pos) && pos_in_list == -1) // Checking if the index is within the map
+            if (search_gridmap.isValid(temp_index) && pos_in_list == -1) // Checking if the index is within the map
             {
                 child.calc_f(current, goal_pos);
 
