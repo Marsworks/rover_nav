@@ -18,7 +18,9 @@
 #include <octomap/octomap.h>
 #include <octomap_msgs/Octomap.h>
 #include <octomap_msgs/conversions.h>
-// #include <octomap_msgs/GetOctomap.h>
+#include <octomap_msgs/GetOctomap.h>
+
+#include <filters/filter_chain.h>
 
 #ifndef GLOBAL_PLANNER_CPP
 #define GLOBAL_PLANNER_CPP
@@ -38,14 +40,31 @@ public:
                   std::vector<geometry_msgs::PoseStamped> &plan);
 
 private:
+    grid_map::GridMap raw_gridmap;      // converted ocotomap to gridmap
+    grid_map::GridMap full_gridmap;     // Full size gridmap 40x80m (non-filtered)
+    grid_map::GridMap filtered_gridmap; // Filtered gridmap (based on Slope + inflation)
+
+    grid_map_msgs::GridMap grid_map_message;
+
+    grid_map::Index children[8] = {{1, 1}, {1, -1}, {-1, 1}, {-1, -1}, {0, 1}, {0, -1}, {1, 0}, {-1, 0}};
+
+    filters::FilterChain<grid_map::GridMap> map_filter{"grid_map::GridMap"};
+    std::string filter_chain_params;
+    
     ros::NodeHandle n;
-    ros::Publisher marker_pub;
-    ros::Subscriber octomap_sub;
+    ros::Publisher marker_publisher;
+    ros::Publisher grid_map_publisher; // Publishes the raw gridmap right after conversion from ocotomap
+    ros::Publisher full_map_publisher; // Publishes the full gridmap
+    ros::Publisher filtered_map_publisher;
+    ros::ServiceClient client;
+
+    octomap_msgs::GetOctomap srv;
 
     visualization_msgs::Marker marker;
 
-    grid_map::GridMap full_map;
-    grid_map::Index children[8] = {{1, 1}, {1, -1}, {-1, 1}, {-1, -1}, {0, 1}, {0, -1}, {1, 0}, {-1, 0}};
+    void mapCallback(const octomap_msgs::Octomap &ocotomap_msg_ptr);
+    bool inflate_gridmap(double radius);
+    bool get_traversable_gridmap(void);
 };
 }; // namespace planner_3d
 #endif

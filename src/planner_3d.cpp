@@ -105,7 +105,8 @@ int is_in_list(std::deque<node> list, node cell)
 //Default Constructor
 namespace planner_3d
 {
-Planner3D::Planner3D() { ROS_WARN("Initialised!"); }
+
+Planner3D::Planner3D() { ROS_WARN("Initialised!");}
 
 Planner3D::Planner3D(std::string name, costmap_2d::Costmap2DROS *costmap_ros)
 {
@@ -116,7 +117,9 @@ void Planner3D::initialize(std::string name, costmap_2d::Costmap2DROS *costmap_r
 {
     ROS_INFO("Initiallising...");
 
-    n = ros::NodeHandle("~/" + name);
+    n = ros::NodeHandle("~/" + name); // name: Planner3D
+    // std::cout << "name " << ros::this_node::getName() << std::endl; // /move_base
+    // std::cout << "namespace " << ros::this_node::getNamespace()<< std::endl; // /
 
     marker_publisher = n.advertise<visualization_msgs::Marker>("explored_cells", 0);
     grid_map_publisher = n.advertise<grid_map_msgs::GridMap>("ocotomap_2_gridmap", 0);
@@ -124,7 +127,15 @@ void Planner3D::initialize(std::string name, costmap_2d::Costmap2DROS *costmap_r
     filtered_map_publisher = n.advertise<grid_map_msgs::GridMap>("filtered_gridmap", 0);
 
     client = n.serviceClient<octomap_msgs::GetOctomap>("/octomap_full");
-    
+
+    if (!map_filter.configure("/grid_map_filters", n))
+    {
+        ROS_ERROR("Could not configure the filter chain.");
+        return;
+    }
+    else
+        ROS_INFO("Map filter chain configured");
+
     full_gridmap.setGeometry(grid_map::Length(40, 80), 0.1, grid_map::Position::Zero());
     full_gridmap.add("elevation", grid_map::Matrix::Constant(400, 800, 0.63));
     full_gridmap.setBasicLayers({"elevation"});
@@ -177,11 +188,22 @@ void Planner3D::mapCallback(const octomap_msgs::Octomap &ocotomap_msg)
     if (ret)
     {
         raw_gridmap.setFrameId(ocotomap_msg.header.frame_id);
-
+    
         grid_map::GridMapRosConverter::toMessage(raw_gridmap, grid_map_message);
         grid_map_publisher.publish(grid_map_message);
 
         ROS_INFO("Octomap converted to grid_map");
+
+        if (!map_filter.update(raw_gridmap, filtered_gridmap)) 
+        {
+            ROS_ERROR("Could not update the grid map filter chain!");
+            return;
+        }
+
+        grid_map::GridMapRosConverter::toMessage(filtered_gridmap, grid_map_message);
+        filtered_map_publisher.publish(grid_map_message);
+
+        ROS_INFO("GridMap filtered");
     }
     else
     {
@@ -212,7 +234,7 @@ bool Planner3D::makePlan(const geometry_msgs::PoseStamped &start, const geometry
     }
 
     ROS_INFO("Adding raw_gridmap to full_gridmap...");
-    // The function below is modified to speedup the data copying 
+    // The function below is modified to speedup the data copying
     bool ret = full_gridmap.addDataFrom(raw_gridmap, false, true, "elevation");
     if (ret)
     {
