@@ -128,6 +128,7 @@ void Planner3D::initialize(std::string name, costmap_2d::Costmap2DROS *costmap_r
 
     client = n.serviceClient<octomap_msgs::GetOctomap>("/octomap_full");
 
+    // Configuring the filter chain
     if (!map_filter.configure("/grid_map_filters", n))
     {
         ROS_ERROR("Could not configure the filter chain.");
@@ -136,8 +137,15 @@ void Planner3D::initialize(std::string name, costmap_2d::Costmap2DROS *costmap_r
     else
         ROS_INFO("Map filter chain configured");
 
-    full_gridmap.setGeometry(grid_map::Length(40, 80), 0.1, grid_map::Position::Zero());
-    full_gridmap.add("elevation", grid_map::Matrix::Constant(400, 800, 0.63));
+    // Get the octomap resolution
+    double res;
+    n.param("/octomap_server/resolution", res, 0.1);
+
+    int map_length = 15; // 40
+    int map_width = 15; // 80
+
+    full_gridmap.setGeometry(grid_map::Length(map_length, map_width), res, grid_map::Position::Zero());
+    full_gridmap.add("elevation", 0.63); // Initialize the cells with 0.63 instead of NAN 
     full_gridmap.setBasicLayers({"elevation"});
     full_gridmap.setFrameId("t265_odom_frame");
 
@@ -155,7 +163,7 @@ void Planner3D::initialize(std::string name, costmap_2d::Costmap2DROS *costmap_r
     ROS_INFO("planner_3D Initiallised");
 }
 
-void Planner3D::mapCallback(const octomap_msgs::Octomap &ocotomap_msg)
+bool Planner3D::mapCallback(const octomap_msgs::Octomap &ocotomap_msg)
 {
     ROS_INFO("New grid_map received");
 
@@ -167,7 +175,7 @@ void Planner3D::mapCallback(const octomap_msgs::Octomap &ocotomap_msg)
     else
     {
         ROS_ERROR("Failed to call convert Octomap.");
-        return;
+        return 0;
     }
 
     grid_map::Position3 min_bound;
@@ -175,6 +183,15 @@ void Planner3D::mapCallback(const octomap_msgs::Octomap &ocotomap_msg)
 
     octomap->getMetricMin(min_bound(0), min_bound(1), min_bound(2));
     octomap->getMetricMax(max_bound(0), max_bound(1), max_bound(2));
+
+    if(min_bound == max_bound)
+    {
+        ROS_ERROR("Octomap is of length 0x0");
+        return 0;
+    }
+
+    // std::cout << min_bound(0) << " " << min_bound(1) << " " << min_bound(2) << std::endl;
+    // std::cout << max_bound(0) << " " << max_bound(1) << " " << max_bound(2) << std::endl;
 
     // min_bound(0) = -40; // min x
     // max_bound(0) = 40; // max x
@@ -184,7 +201,7 @@ void Planner3D::mapCallback(const octomap_msgs::Octomap &ocotomap_msg)
     // max_bound(2) = 2; // max z
 
     bool ret = grid_map::GridMapOctomapConverter::fromOctomap(*octomap, "elevation", raw_gridmap, &min_bound, &max_bound);
-
+    
     if (ret)
     {
         raw_gridmap.setFrameId(ocotomap_msg.header.frame_id);
@@ -192,23 +209,25 @@ void Planner3D::mapCallback(const octomap_msgs::Octomap &ocotomap_msg)
         grid_map::GridMapRosConverter::toMessage(raw_gridmap, grid_map_message);
         grid_map_publisher.publish(grid_map_message);
 
-        ROS_INFO("Octomap converted to grid_map");
+        ROS_INFO("Octomap converted to GridMap");
 
+        ROS_INFO("Filtering raw GridMap...");
         if (!map_filter.update(raw_gridmap, filtered_gridmap)) 
         {
             ROS_ERROR("Could not update the grid map filter chain!");
-            return;
+            return 0;
         }
 
         grid_map::GridMapRosConverter::toMessage(filtered_gridmap, grid_map_message);
         filtered_map_publisher.publish(grid_map_message);
 
         ROS_INFO("GridMap filtered");
+        return 1;
     }
     else
     {
         ROS_ERROR("Failed to call convert Octomap.");
-        return;
+        return 0;
     }
 }
 
@@ -226,7 +245,8 @@ bool Planner3D::makePlan(const geometry_msgs::PoseStamped &start, const geometry
 
     // Get the ocotomap from the octomap_server
     if (client.call(srv))
-        Planner3D::mapCallback(srv.response.map);
+        while(!Planner3D::mapCallback(srv.response.map))
+            ROS_INFO("Re-attempting to convert Octomap to GridMap");
     else
     {
         ROS_ERROR("Failed to call Octomap service: ");
@@ -239,8 +259,8 @@ bool Planner3D::makePlan(const geometry_msgs::PoseStamped &start, const geometry
     if (ret)
     {
         ROS_INFO("Added!");
-        // grid_map::GridMapRosConverter::toMessage(full_gridmap, grid_map_message);
-        // full_map_publisher.publish(grid_map_message);
+        grid_map::GridMapRosConverter::toMessage(full_gridmap, grid_map_message);
+        full_map_publisher.publish(grid_map_message);
     }
     else
     {
