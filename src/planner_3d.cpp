@@ -50,7 +50,7 @@ struct node
         index = ind;
     }
 
-    void calc_f(node *parent, node goal)
+    void calc_f(node *parent, node goal, double k[])
     {
         parent_node = parent;
         //ROS_INFO("parent_node; row: %d, col: %d", parent_node->row, parent_node->col);
@@ -58,7 +58,8 @@ struct node
 
         h = sqrt(pow(goal.position(0) - position(0), 2) + pow(goal.position(1) - position(1), 2));
 
-        f = g + h * 50 + height * 40;
+        // f = g + h * 50 + height * 40;
+        f = k[0]*g + k[1]*h + k[2]*height;
         //ROS_INFO("Cost function; g: %.2f, h: %.2f, height_cost:%.2f & f: %.2f", g, h, height_cost, f);
     }
 };
@@ -126,7 +127,7 @@ void Planner3D::initialize(std::string name, costmap_2d::Costmap2DROS *costmap_r
     full_map_publisher = n.advertise<grid_map_msgs::GridMap>("full_gridmap", 0);
     filtered_map_publisher = n.advertise<grid_map_msgs::GridMap>("filtered_gridmap", 0);
 
-    client = n.serviceClient<octomap_msgs::GetOctomap>("/octomap_full");
+    client = n.serviceClient<octomap_msgs::GetOctomap>("/octomap_binary");
 
     // Configuring the filter chain
     if (!map_filter.configure("/grid_map_filters", n))
@@ -141,8 +142,8 @@ void Planner3D::initialize(std::string name, costmap_2d::Costmap2DROS *costmap_r
     double res;
     n.param("/octomap_server/resolution", res, 0.1);
 
-    int map_length = 15; // 40
-    int map_width = 15; // 80
+    int map_length = 10; // 40
+    int map_width = 10; // 80
 
     full_gridmap.setGeometry(grid_map::Length(map_length, map_width), res, grid_map::Position::Zero());
     full_gridmap.add("elevation", 0.63); // Initialize the cells with 0.63 instead of NAN 
@@ -159,6 +160,11 @@ void Planner3D::initialize(std::string name, costmap_2d::Costmap2DROS *costmap_r
     marker.color.a = 1.0; // Don't forget to set the alpha!
     marker.color.r = 1.0;
     marker.mesh_resource = "package://pr2_description/meshes/base_v0/base.dae";
+
+    factors[0] = 1;
+    factors[1] = 50;
+    factors[2] = 40;
+    factors[3] = 1;
 
     ROS_INFO("planner_3D Initiallised");
 }
@@ -190,8 +196,8 @@ bool Planner3D::mapCallback(const octomap_msgs::Octomap &ocotomap_msg)
         return 0;
     }
 
-    // std::cout << min_bound(0) << " " << min_bound(1) << " " << min_bound(2) << std::endl;
-    // std::cout << max_bound(0) << " " << max_bound(1) << " " << max_bound(2) << std::endl;
+    std::cout << min_bound(0) << " " << min_bound(1) << " " << min_bound(2) << std::endl;
+    std::cout << max_bound(0) << " " << max_bound(1) << " " << max_bound(2) << std::endl;
 
     // min_bound(0) = -40; // min x
     // max_bound(0) = 40; // max x
@@ -210,18 +216,6 @@ bool Planner3D::mapCallback(const octomap_msgs::Octomap &ocotomap_msg)
         grid_map_publisher.publish(grid_map_message);
 
         ROS_INFO("Octomap converted to GridMap");
-
-        ROS_INFO("Filtering raw GridMap...");
-        if (!map_filter.update(raw_gridmap, filtered_gridmap)) 
-        {
-            ROS_ERROR("Could not update the grid map filter chain!");
-            return 0;
-        }
-
-        grid_map::GridMapRosConverter::toMessage(filtered_gridmap, grid_map_message);
-        filtered_map_publisher.publish(grid_map_message);
-
-        ROS_INFO("GridMap filtered");
         return 1;
     }
     else
@@ -245,8 +239,10 @@ bool Planner3D::makePlan(const geometry_msgs::PoseStamped &start, const geometry
 
     // Get the ocotomap from the octomap_server
     if (client.call(srv))
-        while(!Planner3D::mapCallback(srv.response.map))
-            ROS_INFO("Re-attempting to convert Octomap to GridMap");
+    {
+        if(!Planner3D::mapCallback(srv.response.map))
+            return false;
+    }
     else
     {
         ROS_ERROR("Failed to call Octomap service: ");
@@ -269,6 +265,18 @@ bool Planner3D::makePlan(const geometry_msgs::PoseStamped &start, const geometry
     }
 
     int cntr = 0;
+
+    ROS_INFO("Filtering raw GridMap...");
+    if (!map_filter.update(full_gridmap, filtered_gridmap)) 
+    {
+        ROS_ERROR("Could not update the grid map filter chain!");
+        return 0;
+    }
+
+    grid_map::GridMapRosConverter::toMessage(filtered_gridmap, grid_map_message);
+    filtered_map_publisher.publish(grid_map_message);
+
+    ROS_INFO("GridMap filtered");
 
     // gridmap to use for finding the path
     grid_map::GridMap &search_gridmap = full_gridmap;
@@ -335,7 +343,7 @@ bool Planner3D::makePlan(const geometry_msgs::PoseStamped &start, const geometry
 
             if (search_gridmap.isValid(temp_index) && pos_in_list == -1) // Checking if the index is within the map
             {
-                child.calc_f(current, goal_pos);
+                child.calc_f(current, goal_pos, factors);
 
                 pos_in_list = is_in_list(open_list, child);
 
