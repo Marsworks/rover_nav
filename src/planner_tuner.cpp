@@ -7,11 +7,11 @@
 #include <vector>
 #include <iostream>
 
-void callback(rover_nav::plannerConfig& config, planner_3d::Planner3D& planner)
+void callback(rover_nav::plannerConfig& config, planner_3d::Planner3D& planner, ros::Publisher& path_pub)
 {
     ROS_INFO("Reconfiguring planner..");
 
-    std::vector<geometry_msgs::PoseStamped> dummy_path;
+    std::vector<geometry_msgs::PoseStamped> path;
     geometry_msgs::PoseStamped start, goal;
 
     planner.factors[0] = config.g_gain;
@@ -25,7 +25,17 @@ void callback(rover_nav::plannerConfig& config, planner_3d::Planner3D& planner)
     goal.pose.position.x = config.goal_x;
     goal.pose.position.y = config.goal_y;
 
-    planner.makePlan(start, goal, dummy_path);
+    nav_msgs::Path my_path;
+
+    my_path.header.frame_id = "t265_odom_frame";
+
+    if(planner.makePlan(start, goal, path))
+    {
+        my_path.poses = path;
+        path_pub.publish(my_path);
+    }
+
+    ROS_INFO("Callback done");
 }
 
 int main(int argc, char **argv)
@@ -38,8 +48,10 @@ int main(int argc, char **argv)
     
     dynamic_reconfigure::Server<rover_nav::plannerConfig> server;
     dynamic_reconfigure::Server<rover_nav::plannerConfig>::CallbackType f;
+    
+    ros::Publisher path_pub = nh.advertise<nav_msgs::Path>("path", 0);
 
-    f = boost::bind(&callback, _1, boost::ref(planner));
+    f = boost::bind(&callback, _1, boost::ref(planner), boost::ref(path_pub));
     server.setCallback(f);
 
     ros::spin();
