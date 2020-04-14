@@ -38,6 +38,10 @@ public:
     bool makePlan(const geometry_msgs::PoseStamped &start,
                   const geometry_msgs::PoseStamped &goal,
                   std::vector<geometry_msgs::PoseStamped> &plan);
+    
+    double factors[4]; // heuristic function coeffcients 
+    std::string elevation_layer;
+    std::string slope_layer;
 
 private:
     grid_map::GridMap raw_gridmap;      // converted ocotomap to gridmap
@@ -62,9 +66,10 @@ private:
 
     visualization_msgs::Marker marker;
 
-    void mapCallback(const octomap_msgs::Octomap &ocotomap_msg_ptr);
-    bool inflate_gridmap(double radius);
-    bool get_traversable_gridmap(void);
+    bool mapCallback(const octomap_msgs::Octomap &ocotomap_msg_ptr);
+    bool filter_gridmap();
+    bool get_gridmap_from_ocotomap();
+    bool add_2_gridmaps();
 };
 }; // namespace planner_3d
 #endif

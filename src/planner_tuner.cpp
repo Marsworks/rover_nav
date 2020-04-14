@@ -19,6 +19,9 @@ void callback(rover_nav::plannerConfig& config, planner_3d::Planner3D& planner, 
     planner.factors[2] = config.elevation_gain;
     planner.factors[3] = config.slope_gain;
 
+    planner.elevation_layer =  config.elevation_layer;
+    planner.slope_layer =  config.slope_layer;
+
     start.pose.position.x = config.start_x;
     start.pose.position.y = config.start_y;
 

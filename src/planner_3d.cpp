@@ -25,23 +25,23 @@ struct node
         if (map.isInside(position))
         {
             map.getIndex(position, index);
-            height = map.atPosition("elevation", position);
+            height = map.at("elevation", index);
             height = (std::isfinite(height)) ? height : 0;
         }
     }
 
-    node(grid_map::Index ind, const grid_map::GridMap &full_map, const grid_map::GridMap &filtered_map)
+    node(grid_map::Index ind, const grid_map::GridMap &map, std::string elevation_layer, std::string slope_layer)
     {
         index = ind;
-        if (full_map.isValid(index))
+        if (map.isValid(index))
         {
-            full_map.getPosition(index, position);
+            map.getPosition(index, position);
 
-            height = full_map.atPosition("elevation", position);
+            height = map.at(elevation_layer, index);
             height = (std::isfinite(height)) ? height : 0;
 
-            // slope = filtered_map.atPosition("normal_vectors_z", position);
-            // slope = acos(slope);
+            slope = map.at(slope_layer, index);
+            // slope = std::acos(slope);
             // slope = (std::isfinite(slope)) ? slope : 0;
         }
         else
@@ -56,7 +56,6 @@ struct node
     void calc_f(node *parent, node goal, double k[])
     {
         parent_node = parent;
-        //ROS_INFO("parent_node; row: %d, col: %d", parent_node->row, parent_node->col);
         g = 1 + parent_node->g;
 
         h = sqrt(pow(goal.position(0) - position(0), 2) + pow(goal.position(1) - position(1), 2));
@@ -145,8 +144,8 @@ void Planner3D::initialize(std::string name, costmap_2d::Costmap2DROS *costmap_r
     double res;
     n.param("/octomap_server/resolution", res, 0.1);
 
-    int map_length = 7; // 40
-    int map_width = 7; // 80
+    int map_length = 45; // 40
+    int map_width = 85; // 80
 
     full_gridmap.setGeometry(grid_map::Length(map_length, map_width), res, grid_map::Position::Zero());
     full_gridmap.add("elevation", 0.63); // Initialize the cells with 0.63 instead of NAN 
@@ -168,6 +167,9 @@ void Planner3D::initialize(std::string name, costmap_2d::Costmap2DROS *costmap_r
     factors[1] = 20;
     factors[2] = 0;
     factors[3] = 30;
+
+    elevation_layer = "elevation";
+    slope_layer = "normal_vectors_z";
 
     ROS_INFO("planner_3D Initiallised");
 }
@@ -199,8 +201,8 @@ bool Planner3D::mapCallback(const octomap_msgs::Octomap &ocotomap_msg)
         return 0;
     }
 
-    std::cout << min_bound(0) << " " << min_bound(1) << " " << min_bound(2) << std::endl;
-    std::cout << max_bound(0) << " " << max_bound(1) << " " << max_bound(2) << std::endl;
+    // std::cout << min_bound(0) << " " << min_bound(1) << " " << min_bound(2) << std::endl;
+    // std::cout << max_bound(0) << " " << max_bound(1) << " " << max_bound(2) << std::endl;
 
     // min_bound(0) = -40; // min x
     // max_bound(0) = 40; // max x
@@ -388,7 +390,7 @@ bool Planner3D::makePlan(const geometry_msgs::PoseStamped &start, const geometry
         for (auto c : children)
         {
             grid_map::Index temp_index(current->index(0) + c(0), current->index(1) + c(1));
-            node child = node(temp_index, full_gridmap, search_gridmap);
+            node child = node(temp_index, search_gridmap, elevation_layer, slope_layer);
 
             int pos_in_list = is_in_list(closed_list, child);
             if (search_gridmap.isValid(temp_index) && pos_in_list == -1) // Checking if the index is within the map
