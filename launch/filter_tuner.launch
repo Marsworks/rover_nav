@@ -1,18 +1,20 @@
 <launch>
 
     <!-- launching robot Description and gazebo -->
-    <include file="$(find rover_description)/launch/rover_description.launch">
-        <arg name="world_file" value="worlds/moon_surface.world"/>
-        <!--world should be saved in "usr/share/gazebo-7/worlds"-->
-        <!-- <arg name="world_file" value="worlds/cube.world"/> -->
-        <arg name="gui_state" value="false"/>
-    </include>
+    <!-- <include file="$(find rover_description)/launch/rover_description.launch">
+        <arg name="world_file" value="worlds/moon_surface.world"/>  -->
+        <!--world should be saved in "usr/share/gazebo-7/worlds"
+        <arg name="world_file" value="worlds/cube.world"/> -->
+        <!-- <arg name="gui_state" value="false"/>
+    </include> -->
 
+    <!-- PointCloud publisher -->
+    <node pkg="rover_nav" type="dataset_parser.py" name="dataset_parser" output="screen" />
+    
     <!-- Load the general parameters (except for filter chain) for this demo. -->
     <rosparam command="load" file="$(find grid_map_demos)/config/filters_demo.yaml" />
   
     <include file="$(find rover_nav)/launch/octo_mapping.launch"/>
-
     <node pkg="grid_map_demos" type="octomap_to_gridmap_demo" name="octomap_to_gridmap_demo" output="screen" />
     
     <!-- Launch the grid map filters demo node. -->
