@@ -78,7 +78,7 @@ bool get_path(node *cell, node start, const geometry_msgs::PoseStamped &goal, st
     {
         temp_pos.pose.position.x = cell->position(0);
         temp_pos.pose.position.y = cell->position(1);
-        // temp_pos.pose.position.z = cell->height;
+        temp_pos.pose.position.z = cell->height;
 
         temp_pos.pose.orientation.x = goal_quat.x();
         temp_pos.pose.orientation.y = goal_quat.y();
@@ -144,8 +144,8 @@ void Planner3D::initialize(std::string name, costmap_2d::Costmap2DROS *costmap_r
     double res;
     n.param("/octomap_server/resolution", res, 0.1);
 
-    int map_length = 45; // 40
-    int map_width = 85; // 80
+    int map_length = 10; // 45
+    int map_width = 10; // 85
 
     full_gridmap.setGeometry(grid_map::Length(map_length, map_width), res, grid_map::Position::Zero());
     full_gridmap.add("elevation", 0.63); // Initialize the cells with 0.63 instead of NAN 
@@ -163,10 +163,10 @@ void Planner3D::initialize(std::string name, costmap_2d::Costmap2DROS *costmap_r
     marker.color.r = 1.0;
     marker.mesh_resource = "package://pr2_description/meshes/base_v0/base.dae";
 
-    factors[0] = 1;
-    factors[1] = 20;
-    factors[2] = 0;
-    factors[3] = 30;
+    factors[0] = 1; // g factor
+    factors[1] = 20; // h factor
+    factors[2] = 0; // elevation factor
+    factors[3] = 30; // slope factor 
 
     elevation_layer = "elevation";
     slope_layer = "normal_vectors_z";
@@ -197,7 +197,7 @@ bool Planner3D::mapCallback(const octomap_msgs::Octomap &ocotomap_msg)
 
     if(min_bound == max_bound)
     {
-        ROS_ERROR("Octomap is of length 0x0");
+        ROS_ERROR("Octomap is empty.");
         return 0;
     }
 
@@ -283,19 +283,19 @@ bool Planner3D::filter_gridmap()
 
     ROS_INFO("GridMap filtered");
 
-    std::vector<std::string> layers;
+    // std::vector<std::string> layers;
 
-    layers = full_gridmap.getLayers();
-    std::cout << "Full map layers: ";
-    for(auto layer:layers)
-        std::cout << layer << " ";
-    std::cout << std::endl;
+    // layers = full_gridmap.getLayers();
+    // std::cout << "Full map layers: ";
+    // for(auto layer:layers)
+    //     std::cout << layer << " ";
+    // std::cout << std::endl;
 
-    layers = filtered_gridmap.getLayers();
-    std::cout << "Filter map layers: ";
-    for(auto layer:layers)
-        std::cout << layer << " ";
-    std::cout << std::endl;
+    // layers = filtered_gridmap.getLayers();
+    // std::cout << "Filter map layers: ";
+    // for(auto layer:layers)
+    //     std::cout << layer << " ";
+    // std::cout << std::endl;
     
     return true;
 }
