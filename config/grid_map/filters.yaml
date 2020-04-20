@@ -9,35 +9,47 @@ grid_map_filters:
       radius: 0.6 # 0.25
       normal_vector_positive_axis: z
 
-  # Add a color layer for visualization based on the surface normal.
-  # - name: normal_color_map
-  #   type: gridMapFilters/NormalColorMapFilter
-  #   params:
-  #     input_layers_prefix: normal_vectors_
-  #     output_layer: normal_color
-
-  # Compute slope from surface normal.
   - name: slope
     type: gridMapFilters/MathExpressionFilter
     params:
       output_layer: slope
       expression: acos(normal_vectors_z)
-
-  # Inflating the slope.
-  - name: edge_detection
-    type: gridMapFilters/MeanInRadiusFilter
+  
+  - name: slope_dilating_3
+    type: gridMapFilters/SlidingWindowMathExpressionFilter
     params:
       input_layer: slope
-      output_layer: inflated_slope
-      radius: 0.6 
+      output_layer: dilated_slope_3
+      expression: 'max(slope)'
+      compute_empty_cells: false
+      edge_handling: mean # options: inside, crop, empty, mean
+      window_size: 3
+  
+  - name: slope_dilating_5
+    type: gridMapFilters/SlidingWindowMathExpressionFilter
+    params:
+      input_layer: slope
+      output_layer: dilated_slope_5
+      expression: 'max(slope)'
+      compute_empty_cells: false
+      edge_handling: mean # options: inside, crop, empty, mean
+      window_size: 5 
+
+  # Inflating the slope.
+  # - name: edge_detection
+  #   type: gridMapFilters/MeanInRadiusFilter
+  #   params:
+  #     input_layer: slope
+  #     output_layer: inflated_slope
+  #     radius: 0.6 
     
   # Inflating the elevation.
-  - name: elevation_inflation
-    type: gridMapFilters/MeanInRadiusFilter
-    params:
-      input_layer: elevation
-      output_layer: inflated_elevation
-      radius: 0.6
+  # - name: elevation_inflation
+  #   type: gridMapFilters/MeanInRadiusFilter
+  #   params:
+  #     input_layer: elevation
+  #     output_layer: inflated_elevation
+  #     radius: 0.6
 
   # Reduce noise with a radial blurring filter.
   # - name: mean_in_radius
@@ -70,23 +82,25 @@ grid_map_filters:
       compute_empty_cells: false
       edge_handling: mean # options: inside, crop, empty, mean
       window_size: 5 # Make sure to make this compatible with the kernel matrix.
-
-  - name: box_blur
-    type: gridMapFilters/SlidingWindowMathExpressionFilter
-    params:
-      input_layer: elevation
-      output_layer: elevation_blur
-      expression: 'sumOfFinites((1/25).*[1,1,1,1,1; 1,1,1,1,1; 1,1,1,1,1; 1,1,1,1,1; 1,1,1,1,1].*elevation)'
-      compute_empty_cells: false
-      edge_handling: mean # options: inside, crop, empty, mean
-      window_size: 5 # Make sure to make this compatible with the kernel matrix.
   
-  - name: box_blur2
-    type: gridMapFilters/SlidingWindowMathExpressionFilter
-    params:
-      input_layer: elevation_blur
-      output_layer: elevation_blur_double
-      expression: 'sumOfFinites((1/25).*[1,1,1,1,1; 1,1,1,1,1; 1,1,1,1,1; 1,1,1,1,1; 1,1,1,1,1].*elevation_blur)'
-      compute_empty_cells: false
-      edge_handling: mean # options: inside, crop, empty, mean
-      window_size: 5 # Make sure to make this compatible with the kernel matrix.
+
+
+  # - name: box_blur
+  #   type: gridMapFilters/SlidingWindowMathExpressionFilter
+  #   params:
+  #     input_layer: elevation
+  #     output_layer: elevation_blur
+  #     expression: 'sumOfFinites((1/25).*[1,1,1,1,1; 1,1,1,1,1; 1,1,1,1,1; 1,1,1,1,1; 1,1,1,1,1].*elevation)'
+  #     compute_empty_cells: false
+  #     edge_handling: mean # options: inside, crop, empty, mean
+  #     window_size: 5 # Make sure to make this compatible with the kernel matrix.
+  
+  # - name: box_blur2
+  #   type: gridMapFilters/SlidingWindowMathExpressionFilter
+  #   params:
+  #     input_layer: elevation_blur
+  #     output_layer: elevation_blur_double
+  #     expression: 'sumOfFinites((1/25).*[1,1,1,1,1; 1,1,1,1,1; 1,1,1,1,1; 1,1,1,1,1; 1,1,1,1,1].*elevation_blur)'
+  #     compute_empty_cells: false
+  #     edge_handling: mean # options: inside, crop, empty, mean
+  #     window_size: 5 # Make sure to make this compatible with the kernel matrix.
