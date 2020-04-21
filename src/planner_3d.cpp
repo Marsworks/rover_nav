@@ -10,8 +10,8 @@ struct node
     grid_map::Index index;       // index in the map 2D array
 
     double g = 0;  // Number of cells from the start node
-    double h;      // Distance from node to goal
-    double f;      // cost function
+    double h = 0;      // Distance from node to goal
+    double f = 0;      // cost function
     double height; //height data in the cell
     double slope=0;
 
@@ -58,11 +58,10 @@ struct node
         parent_node = parent;
         g = 1 + parent_node->g;
 
-        h = sqrt(pow(goal.position(0) - position(0), 2) + pow(goal.position(1) - position(1), 2));
+        h = pow(goal.index(0) - index(0), 2) + pow(goal.index(1) - index(1), 2);
 
-        // f = g + h * 50 + height * 40;
-        f = k[0]*g + k[1]*h + k[2]*height + k[3]*slope;
-        //ROS_INFO("Cost function; g: %.2f, h: %.2f, height_cost:%.2f & f: %.2f", g, h, height_cost, f);
+        f = k[0]*(g + h) + k[3]*slope;
+        // ROS_INFO("Cost function; g: %.2f, h: %.2f, f: %.2f", g , h, f);
     }
 };
 
@@ -163,13 +162,13 @@ void Planner3D::initialize(std::string name, costmap_2d::Costmap2DROS *costmap_r
     marker.color.r = 1.0;
     marker.mesh_resource = "package://pr2_description/meshes/base_v0/base.dae";
 
-    factors[0] = 1; // g factor
-    factors[1] = 20; // h factor
-    factors[2] = 0; // elevation factor
-    factors[3] = 30; // slope factor 
+    factors[0] = 1; // g+h factor
+    factors[1] = 0; // not used
+    factors[2] = 0; // elevation factor; not used
+    factors[3] = 150; // slope factor 
 
     elevation_layer = "elevation";
-    slope_layer = "normal_vectors_z";
+    slope_layer = "dilated_slope_5";
 
     ROS_INFO("planner_3D Initiallised");
 }
@@ -307,6 +306,7 @@ bool Planner3D::makePlan(const geometry_msgs::PoseStamped &start, const geometry
     time = ros::Time::now();
 
     ROS_INFO("Finding path...");
+    ROS_INFO("layer used: %s", slope_layer.c_str());
 
     // Clear all the existing markers from the previous path
     marker.type = visualization_msgs::Marker::DELETEALL;
@@ -365,15 +365,14 @@ bool Planner3D::makePlan(const geometry_msgs::PoseStamped &start, const geometry
 
         node *current = new node(open_list[0]);
 
+        open_list.pop_front();
+        closed_list.push_back(*current);
+        
         marker.id = ++cntr;
         marker.pose.position.x = current->position.x();
         marker.pose.position.y = current->position.y();
-        marker.pose.position.z = current->height;
-
+        // marker.pose.position.z = current->height;
         marker_publisher.publish(marker);
-
-        open_list.pop_front();
-        closed_list.push_back(*current);
 
         if (current->index(0) == goal_pos.index(0) && current->index(1) == goal_pos.index(1)) // Index has been choosen instead of position to avoid comparing floats
         {
