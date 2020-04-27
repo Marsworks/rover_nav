@@ -15,6 +15,8 @@ struct node
     double height; //height data in the cell
     double slope=0;
 
+    bool traversable = true;
+
     node *parent_node = NULL;
 
     node() {}
@@ -37,12 +39,16 @@ struct node
         {
             map.getPosition(index, position);
 
-            height = map.at(elevation_layer, index);
+            height = map.at("elevation", index);
             height = (std::isfinite(height)) ? height : 0;
 
             slope = map.at(slope_layer, index);
-            // slope = std::acos(slope);
-            // slope = (std::isfinite(slope)) ? slope : 0;
+            
+            ROS_INFO("Slope: %0.3f", slope);
+
+            // Marking cell with a slope of bigger 45 deg as non-traversable
+            if(abs(slope) > 1.07)
+                traversable = false;
         }
         else
             height = 0;
@@ -143,8 +149,8 @@ void Planner3D::initialize(std::string name, costmap_2d::Costmap2DROS *costmap_r
     double res;
     n.param("/octomap_server/resolution", res, 0.1);
 
-    int map_length = 10; // 45
-    int map_width = 10; // 85
+    int map_length = 30; // 45
+    int map_width = 30; // 85
 
     full_gridmap.setGeometry(grid_map::Length(map_length, map_width), res, grid_map::Position::Zero());
     full_gridmap.add("elevation", 0.63); // Initialize the cells with 0.63 instead of NAN 
@@ -371,7 +377,7 @@ bool Planner3D::makePlan(const geometry_msgs::PoseStamped &start, const geometry
         marker.id = ++cntr;
         marker.pose.position.x = current->position.x();
         marker.pose.position.y = current->position.y();
-        // marker.pose.position.z = current->height;
+        marker.pose.position.z = current->height;
         marker_publisher.publish(marker);
 
         if (current->index(0) == goal_pos.index(0) && current->index(1) == goal_pos.index(1)) // Index has been choosen instead of position to avoid comparing floats
@@ -392,7 +398,7 @@ bool Planner3D::makePlan(const geometry_msgs::PoseStamped &start, const geometry
             node child = node(temp_index, search_gridmap, elevation_layer, slope_layer);
 
             int pos_in_list = is_in_list(closed_list, child);
-            if (search_gridmap.isValid(temp_index) && pos_in_list == -1) // Checking if the index is within the map
+            if (search_gridmap.isValid(temp_index) && pos_in_list == -1 && child.traversable) // Checking if the index is within the map
             {
                 child.calc_f(current, goal_pos, factors);
 
