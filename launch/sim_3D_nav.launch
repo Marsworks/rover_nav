@@ -3,7 +3,7 @@
     <!-- world should be saved in "usr/share/gazebo-7/worlds"-->
     <!-- Worlds avaliable cube.world, moon_surface.world & empty.world" -->
     <include file="$(find rover_description)/launch/rover_description.launch">
-        <arg name="world_file"              value="worlds/moon_surface.world"/>
+        <arg name="world_file"              value="/home/marwan/catkin_ws/src/rover_description/worlds/moon_surface.world"/>
         <arg name="gui_state"               value="false"/>
         <arg name="enable_manual_cmd_vel"   value="true"/>
     </include>
