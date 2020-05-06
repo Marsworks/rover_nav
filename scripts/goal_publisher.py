@@ -24,8 +24,8 @@ if __name__ == '__main__':
     goal.target_pose.header.frame_id = "t265_odom_frame"
     goal.target_pose.header.stamp = rospy.get_rostime()
 
-    goal.target_pose.pose.position.x = -1
-    goal.target_pose.pose.position.y = -1
+    goal.target_pose.pose.position.x = 3.2
+    goal.target_pose.pose.position.y = 3
     goal.target_pose.pose.orientation.w = 1.0
 
     client.send_goal(goal, feedback_cb=goal_feedback_cb)
@@ -48,14 +48,14 @@ if __name__ == '__main__':
     #                             #    and was successfully cancelled (Terminal State)
     # uint8 LOST            = 9
 
-    while (client.get_state() == 0 or client.get_state() == 1) and not rospy.is_shutdown():
-        rospy.loginfo(SimpleGoalState.to_string(client.get_state()))
-        rospy.sleep(1)
-    if client.get_state() == 3:
-        rospy.loginfo("SUCCEEDED")
-    elif client.get_state() == 4:
-        rospy.loginfo("ABORTED")
-    elif client.get_state() == 5:
-        rospy.loginfo("REJECTED")
-    else:
-        rospy.loginfo(client.get_state())
+    # while (client.get_state() == 0 or client.get_state() == 1) and not rospy.is_shutdown():
+    #     rospy.loginfo(SimpleGoalState.to_string(client.get_state()))
+    #     rospy.sleep(1)
+    # if client.get_state() == 3:
+    #     rospy.loginfo("SUCCEEDED")
+    # elif client.get_state() == 4:
+    #     rospy.loginfo("ABORTED")
+    # elif client.get_state() == 5:
+    #     rospy.loginfo("REJECTED")
+    # else:
+    #     rospy.loginfo(client.get_state())
