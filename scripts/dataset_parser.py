@@ -9,7 +9,7 @@ from tf import TransformBroadcaster, transformations
 from pathlib import Path
 import numpy as np
 
-dataset_path = Path("/home/mk_99/Downloads/3D_maps_space_datasets/a100_dome")
+dataset_path = Path("/home/mk_99/Downloads/3D_maps_space_datasets/a100_dome") # p2at_met
 tf_pub = TransformBroadcaster()
 
 header = Header()
@@ -22,7 +22,7 @@ fields = [PointField('x', 0, PointField.FLOAT32, 1),
           
 pcl_pub = rospy.Publisher('/d400/depth/color/points/', PointCloud2, queue_size=10)
 rospy.init_node('pcl_publisher', anonymous=True)
-rate = rospy.Rate(10)
+# rate = rospy.Rate(10)
 
 cntr = 0
 for sub_dir in dataset_path.iterdir(): 
