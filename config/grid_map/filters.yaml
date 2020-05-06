@@ -8,32 +8,16 @@ grid_map_filters:
       output_layers_prefix: normal_vectors_
       radius: 0.6 # 0.25
       normal_vector_positive_axis: z
-
-  - name: slope
-    type: gridMapFilters/MathExpressionFilter
-    params:
-      output_layer: slope
-      expression: acos(normal_vectors_z)
-  
-  - name: slope_dilating_3
-    type: gridMapFilters/SlidingWindowMathExpressionFilter
-    params:
-      input_layer: slope
-      output_layer: dilated_slope_3
-      expression: 'max(slope)'
-      compute_empty_cells: false
-      edge_handling: mean # options: inside, crop, empty, mean
-      window_size: 3
   
   - name: slope_dilating_5
     type: gridMapFilters/SlidingWindowMathExpressionFilter
     params:
-      input_layer: slope
+      input_layer: normal_vectors_z
       output_layer: dilated_slope_5
-      expression: 'max(slope)'
+      expression: 'max(acos(normal_vectors_z))'
       compute_empty_cells: false
       edge_handling: mean # options: inside, crop, empty, mean
-      window_size: 5 
+      window_size: 5
 
   # Inflating the slope.
   # - name: edge_detection
@@ -42,65 +26,3 @@ grid_map_filters:
   #     input_layer: slope
   #     output_layer: inflated_slope
   #     radius: 0.6 
-    
-  # Inflating the elevation.
-  # - name: elevation_inflation
-  #   type: gridMapFilters/MeanInRadiusFilter
-  #   params:
-  #     input_layer: elevation
-  #     output_layer: inflated_elevation
-  #     radius: 0.6
-
-  # Reduce noise with a radial blurring filter.
-  # - name: mean_in_radius
-  #   type: gridMapFilters/MeanInRadiusFilter
-  #   params:
-  #     input_layer: elevation
-  #     output_layer: elevation_smooth
-  #     radius: 0.15
-  
-  # Duplicate layer.
-  # - name: duplicate
-  #   type: gridMapFilters/DuplicationFilter
-  #   params:
-  #     input_layer: elevation
-  #     output_layer: elevation
-
-  - name: mean_in_radius
-    type: gridMapFilters/MeanInRadiusFilter
-    params:
-      input_layer: slope
-      output_layer: slope_mean_in_radius
-      radius: 0.5
-
-  - name: slope_box_blur
-    type: gridMapFilters/SlidingWindowMathExpressionFilter
-    params:
-      input_layer: slope
-      output_layer: slope_blur
-      expression: 'sumOfFinites((1/25).*[1,1,1,1,1; 1,1,1,1,1; 1,1,1,1,1; 1,1,1,1,1; 1,1,1,1,1].*slope)'
-      compute_empty_cells: false
-      edge_handling: mean # options: inside, crop, empty, mean
-      window_size: 5 # Make sure to make this compatible with the kernel matrix.
-  
-
-
-  # - name: box_blur
-  #   type: gridMapFilters/SlidingWindowMathExpressionFilter
-  #   params:
-  #     input_layer: elevation
-  #     output_layer: elevation_blur
-  #     expression: 'sumOfFinites((1/25).*[1,1,1,1,1; 1,1,1,1,1; 1,1,1,1,1; 1,1,1,1,1; 1,1,1,1,1].*elevation)'
-  #     compute_empty_cells: false
-  #     edge_handling: mean # options: inside, crop, empty, mean
-  #     window_size: 5 # Make sure to make this compatible with the kernel matrix.
-  
-  # - name: box_blur2
-  #   type: gridMapFilters/SlidingWindowMathExpressionFilter
-  #   params:
-  #     input_layer: elevation_blur
-  #     output_layer: elevation_blur_double
-  #     expression: 'sumOfFinites((1/25).*[1,1,1,1,1; 1,1,1,1,1; 1,1,1,1,1; 1,1,1,1,1; 1,1,1,1,1].*elevation_blur)'
-  #     compute_empty_cells: false
-  #     edge_handling: mean # options: inside, crop, empty, mean
-  #     window_size: 5 # Make sure to make this compatible with the kernel matrix.
