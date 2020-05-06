@@ -1,6 +1,7 @@
 <launch>
   <node pkg="octomap_server" type="octomap_server_node" name="octomap_server">
-    <param name="resolution" value="0.1"/> <!--0.05-->
+    <!--0.05-->
+    <param name="resolution" value="0.2"/>
     <remap from="cloud_in" to="/d400/depth/color/points"/>
     <param name="filter_ground" type="bool" value="false"/>
     <!-- <param name="occupancy_max_z" type="float" value="2.0"/> -->
@@ -12,11 +13,11 @@
   </node>
 
   <!-- <rosparam command="load" file="$(find rover_nav/config/grid_map/gridmap_params.yaml"/> -->
-  <rosparam command="load" file="$(find grid_map_demos)/config/octomap_to_gridmap_demo.yaml" />
-   <!-- Launch the octomap conversion node -->
-  <node pkg="grid_map_demos" type="octomap_to_gridmap_demo" name="octomap_to_gridmap_demo" output="screen" />
+  <!-- <rosparam command="load" file="$(find grid_map_demos)/config/octomap_to_gridmap_demo.yaml" /> -->
+  
+  <!-- Launch the octomap conversion node -->
+  <!-- <node pkg="grid_map_demos" type="octomap_to_gridmap_demo" name="octomap_to_gridmap_demo" output="screen" /> -->
 
   <!-- Launch the grid map visualizer -->
   <node pkg="grid_map_visualization" type="grid_map_visualization" name="grid_map_visualization" output="screen" />
-  
 </launch>
