@@ -1,9 +1,9 @@
 global_frame: t265_odom_frame
 robot_base_frame: base_link
-update_frequency: 5.0
-publish_frequency: 5.0
+update_frequency: 1
+publish_frequency: 10
 rolling_window: true
-width: 5
-height: 5
+width: 2
+height: 2
 transform_tolerance: 2
 footprint: [[-0.45, -0.375], [0.45, -0.375], [0.45, 0.375], [-0.45, 0.375]]
