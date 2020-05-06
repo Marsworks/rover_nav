@@ -31,7 +31,7 @@ find_package(catkin REQUIRED COMPONENTS
 
 # dynamic reconfigure installation stuff
 generate_dynamic_reconfigure_options(
-  cfg/planner_config.cfg
+  cfg/planner.cfg
 )
 
 catkin_package(
@@ -48,22 +48,24 @@ include_directories(
 ## Install ##
 #############
 
-install(DIRECTORY config doc launch rviz
-  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
-)
+# install(DIRECTORY config doc launch rviz
+#   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
+# )
 
-install(PROGRAMS scripts/ground_truth_pose_publisher.py
-  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-)
-
-# add_executable(planner_3D src/planner_3D.cpp)
-# target_link_libraries(planner_3D ${catkin_LIBRARIES})
+# install(PROGRAMS scripts/ground_truth_pose_publisher.py
+#   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+# )
 
 add_library(planner_3d src/planner_3d.cpp)
-add_dependencies(planner_3d ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(
+  planner_3d 
+  ${${PROJECT_NAME}_EXPORTED_TARGETS} 
+  ${catkin_EXPORTED_TARGETS}
+)
 
-target_link_libraries(planner_3d
-    ${catkin_LIBRARIES}
+target_link_libraries(
+  planner_3d
+  ${catkin_LIBRARIES}
 )
 
 install(
@@ -74,7 +76,7 @@ install(
 install(
   DIRECTORY include/${PROJECT_NAME}/
   DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
-  PATTERN ".svn" EXCLUDE
+  # PATTERN ".svn" EXCLUDE
 )
 
 install(
@@ -82,9 +84,11 @@ install(
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
 )
 
-
-# planner_tuner c++ node installation
+# planner_tuner c++ node build
 add_executable(planner_tuner src/planner_tuner.cpp)
-add_dependencies(planner_tuner ${PROJECT_NAME}_gencfg)
+target_link_libraries(planner_tuner 
+  ${catkin_LIBRARIES}
+  planner_3d
+)
 
-target_link_libraries(planner_tuner ${catkin_LIBRARIES})
+add_dependencies(planner_tuner ${PROJECT_NAME}_gencfg)
