@@ -3,7 +3,9 @@ Panels:
     Help Height: 0
     Name: Displays
     Property Tree Widget:
-      Expanded: ~
+      Expanded:
+        - /Slope1
+        - /Slope_blured1
       Splitter Ratio: 0.611464977
     Tree Height: 853
   - Class: rviz/Selection
@@ -43,7 +45,7 @@ Visualization Manager:
       Color: 200; 200; 200
       Color Layer: elevation
       Color Transformer: GridMapLayer
-      Enabled: true
+      Enabled: false
       Height Layer: elevation
       Height Transformer: GridMapLayer
       History Length: 1
@@ -57,7 +59,7 @@ Visualization Manager:
       Topic: /grid_map_filter_demo/filtered_map
       Unreliable: false
       Use Rainbow: true
-      Value: true
+      Value: false
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Class: grid_map_rviz_plugin/GridMap
@@ -83,18 +85,18 @@ Visualization Manager:
       Autocompute Intensity Bounds: true
       Class: grid_map_rviz_plugin/GridMap
       Color: 200; 200; 200
-      Color Layer: normal_color
+      Color Layer: slope
       Color Transformer: IntensityLayer
       Enabled: false
-      Height Layer: normal_color
-      Height Transformer: GridMapLayer
+      Height Layer: elevation
+      Height Transformer: Layer
       History Length: 1
       Invert Rainbow: false
       Max Color: 255; 0; 0
       Max Intensity: 10
       Min Color: 255; 255; 255
       Min Intensity: 0
-      Name: Normals
+      Name: Slope
       Show Grid Lines: false
       Topic: /grid_map_filter_demo/filtered_map
       Unreliable: false
@@ -107,16 +109,16 @@ Visualization Manager:
       Color Layer: slope
       Color Transformer: IntensityLayer
       Enabled: true
-      Height Layer: slope
-      Height Transformer: GridMapLayer
+      Height Layer: slope_blur
+      Height Transformer: Flat
       History Length: 1
       Invert Rainbow: false
-      Max Color: 255; 0; 0
+      Max Color: 100; 255; 0
       Max Intensity: 10
       Min Color: 255; 255; 255
       Min Intensity: 0
-      Name: Slope
-      Show Grid Lines: false
+      Name: Slope_blured
+      Show Grid Lines: true
       Topic: /grid_map_filter_demo/filtered_map
       Unreliable: false
       Use Rainbow: false
@@ -127,7 +129,7 @@ Visualization Manager:
       Color: 200; 200; 200
       Color Layer: slope
       Color Transformer: IntensityLayer
-      Enabled: true
+      Enabled: false
       Height Layer: inflated_slope
       Height Transformer: GridMapLayer
       History Length: 1
@@ -141,7 +143,7 @@ Visualization Manager:
       Topic: /grid_map_filter_demo/filtered_map
       Unreliable: false
       Use Rainbow: false
-      Value: true
+      Value: false
     - Alpha: 1
       Autocompute Intensity Bounds: false
       Class: grid_map_rviz_plugin/GridMap
@@ -167,18 +169,18 @@ Visualization Manager:
       Autocompute Intensity Bounds: false
       Class: grid_map_rviz_plugin/GridMap
       Color: 200; 200; 200
-      Color Layer: traversability
-      Color Transformer: GridMapLayer
+      Color Layer: elevation
+      Color Transformer: IntensityLayer
       Enabled: false
-      Height Layer: traversability
-      Height Transformer: GridMapLayer
+      Height Layer: elevation_blur_double
+      Height Transformer: ""
       History Length: 1
       Invert Rainbow: true
       Max Color: 255; 255; 255
       Max Intensity: 1.20000005
       Min Color: 0; 0; 0
       Min Intensity: 0
-      Name: Traversability
+      Name: elevation_blur
       Show Grid Lines: false
       Topic: /grid_map_filter_demo/filtered_map
       Unreliable: false
@@ -227,25 +229,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 8.84869671
+      Distance: 11.4795475
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.0599999987
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 2.82526779
-        Y: -1.40427029
-        Z: -0.230517268
+        X: 8.12939453
+        Y: 1.71621716
+        Z: -0.918549716
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.0500000007
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.00999999978
-      Pitch: 0.489798188
+      Pitch: 1.56979632
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 2.51491809
+      Yaw: 2.44493866
     Saved: ~
 Window Geometry:
   Displays:

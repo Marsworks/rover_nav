@@ -4,7 +4,6 @@ Panels:
     Name: Displays
     Property Tree Widget:
       Expanded:
-        - /Global Options1
         - /TF1/Frames1
         - /PointCloud21/Autocompute Value Bounds1
         - /grid_map border1/Namespaces1
@@ -203,8 +202,8 @@ Visualization Manager:
       Head Diameter: 0.300000012
       Head Length: 0.200000003
       Length: 0.300000012
-      Line Style: Lines
-      Line Width: 0.0299999993
+      Line Style: Billboards
+      Line Width: 0.0599999987
       Name: Global_Path
       Offset:
         X: 0
@@ -255,7 +254,7 @@ Visualization Manager:
       Color: 200; 200; 200
       Color Layer: elevation
       Color Transformer: GridMapLayer
-      Enabled: true
+      Enabled: false
       Height Layer: elevation
       Height Transformer: GridMapLayer
       History Length: 1
@@ -269,6 +268,27 @@ Visualization Manager:
       Topic: /move_base/Planner3D/ocotomap_2_gridmap
       Unreliable: false
       Use Rainbow: true
+      Value: false
+    - Alpha: 0.300000012
+      Autocompute Intensity Bounds: true
+      Class: grid_map_rviz_plugin/GridMap
+      Color: 200; 200; 200
+      Color Layer: slope
+      Color Transformer: IntensityLayer
+      Enabled: true
+      Height Layer: inflated_slope
+      Height Transformer: ""
+      History Length: 1
+      Invert Rainbow: false
+      Max Color: 0; 255; 0
+      Max Intensity: 10
+      Min Color: 255; 255; 255
+      Min Intensity: 0
+      Name: Filtered GridMap
+      Show Grid Lines: true
+      Topic: /move_base/Planner3D/filtered_gridmap
+      Unreliable: false
+      Use Rainbow: false
       Value: true
     - Alpha: 1
       Autocompute Intensity Bounds: true
@@ -395,25 +415,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 7.42050266
+      Distance: 8.78359318
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.0599999987
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 0.41300422
-        Y: -0.471983135
-        Z: -0.205896795
+        X: 2.56769252
+        Y: 2.64824295
+        Z: 0.02038702
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.0500000007
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.00999999978
-      Pitch: 0.759795547
+      Pitch: 0.804795444
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 2.31547165
+      Yaw: 2.6555016
     Saved: ~
 Window Geometry:
   Displays:
