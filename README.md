@@ -12,23 +12,14 @@ This package is **under development**.
  * ROS kinetic/melodic
 
 ## Installation
-### Dependencies
-* grid_map 
-  ```shell
-  sudo apt-get install ros-$ROS_DISTRO-grid-map
-  ```
-* ocotmap
-  ```shell
-  sudo apt install ros-$ROS_DISTRO-octomap*
-  ```
 
 ### Build
 
 ```bash
 cd catkin_ws/src
 git clone https://github.com/Marsworks/rover_nav
-git clone https://github.com/Marsworks/rover_description
 cd ~/catkin_ws
+rosdep install --rosdistro melodic --from-paths src -y
 catkin_make
 source devel/setup.bash
 ```

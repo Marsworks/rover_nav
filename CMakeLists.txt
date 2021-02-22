@@ -10,7 +10,6 @@ find_package(catkin REQUIRED COMPONENTS
   grid_map_msgs
   grid_map_filters
   grid_map_octomap
-  octomap
   octomap_msgs
   base_local_planner
   nav_core
@@ -18,6 +17,8 @@ find_package(catkin REQUIRED COMPONENTS
   filters
   dynamic_reconfigure
 )
+
+find_package(octomap REQUIRED)
 
 ###################################
 ## catkin specific configuration ##
