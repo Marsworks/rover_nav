@@ -17,6 +17,7 @@
   <depend>tf2_ros</depend>
 
   <depend>grid_map</depend>
+  <depend>grid_map_pcl</depend>
   <depend>rviz</depend>
   <depend>roscpp</depend>
   <depend>rospy</depend>
