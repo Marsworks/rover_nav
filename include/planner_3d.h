@@ -6,8 +6,6 @@
 
 #include <grid_map_msgs/GridMap.h>
 #include <grid_map_ros/grid_map_ros.hpp>
-#include <grid_map_ros/GridMapRosConverter.hpp>
-#include <grid_map_octomap/GridMapOctomapConverter.hpp>
 
 #include <deque>
 #include <vector>
@@ -57,19 +55,15 @@ private:
     
     ros::NodeHandle n;
     ros::Publisher marker_publisher;
-    ros::Publisher grid_map_publisher; // Publishes the raw gridmap right after conversion from ocotomap
     ros::Publisher full_map_publisher; // Publishes the full gridmap
     ros::Publisher filtered_map_publisher;
-    ros::ServiceClient client;
-
-    octomap_msgs::GetOctomap srv;
+    ros::Subscriber global_map_subscrber;
 
     visualization_msgs::Marker marker;
 
-    bool mapCallback(const octomap_msgs::Octomap &ocotomap_msg_ptr);
-    bool filter_gridmap();
-    bool get_gridmap_from_ocotomap();
-    bool add_2_gridmaps();
+    bool grid_map_initialized;
+
+    void gridmap_callback(const grid_map_msgs::GridMapConstPtr &grid_map_msg_ptr);
 };
 }; // namespace planner_3d
 #endif

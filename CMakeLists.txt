@@ -7,10 +7,7 @@ set(CMAKE_CXX_FLAGS "-std=c++11 ${CMAKE_CXX_FLAGS}")
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   grid_map_ros
-  grid_map_msgs
-  grid_map_filters
-  grid_map_octomap
-  octomap_msgs
+  grid_map_pcl
   base_local_planner
   nav_core
   pluginlib
@@ -18,18 +15,13 @@ find_package(catkin REQUIRED COMPONENTS
   dynamic_reconfigure
 )
 
-find_package(octomap REQUIRED)
-
 ###################################
 ## catkin specific configuration ##
 ###################################
 ## The catkin_package macro generates cmake config files for your package
 ## Declare things to be passed to dependent projects
 ## INCLUDE_DIRS: uncomment this if you package contains header files
-## LIBRARIES: libraries you create in this project that dependent projects also need
-## CATKIN_DEPENDS: catkin_packages dependent projects also need
-## DEPENDS: system dependencies of this project that dependent projects also need
-
+## LIBRARIES: libraries you create in televation
 # dynamic reconfigure installation stuff
 generate_dynamic_reconfigure_options(
   cfg/planner.cfg
