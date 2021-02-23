@@ -30,7 +30,7 @@ void callback(rover_nav::plannerConfig& config, planner_3d::Planner3D& planner, 
 
     nav_msgs::Path my_path;
 
-    my_path.header.frame_id = "t265_odom_frame";
+    my_path.header.frame_id = "map";
 
     if(planner.makePlan(start, goal, path))
     {

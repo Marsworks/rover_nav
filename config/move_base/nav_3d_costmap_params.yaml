@@ -1,4 +1,4 @@
-global_frame: t265_odom_frame
+global_frame: map
 robot_base_frame: base_link
 update_frequency: 1
 publish_frequency: 10

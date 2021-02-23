@@ -21,7 +21,7 @@ if __name__ == '__main__':
     rospy.loginfo("Server found")
 
     goal = MoveBaseGoal()
-    goal.target_pose.header.frame_id = "t265_odom_frame"
+    goal.target_pose.header.frame_id = "map"
     goal.target_pose.header.stamp = rospy.get_rostime()
 
     goal.target_pose.pose.position.x = 3.2

@@ -18,7 +18,7 @@ TrajectoryPlannerROS:
 
   holonomic_robot: false
 
-  global_frame_id: "t265_odom_frame"
+  global_frame_id: "map"
 
   recovery_behavior_enabled: false
   clearing_rotation_allowed: false
