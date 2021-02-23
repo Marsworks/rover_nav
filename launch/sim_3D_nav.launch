@@ -1,27 +1,39 @@
 <launch>
-    <!-- launching robot Description and gazebo -->
-    <!-- world should be saved in "usr/share/gazebo-7/worlds"-->
-    <!-- Worlds avaliable cube.world, moon_surface.world & empty.world" -->
-    <include file="$(find rover_description)/launch/rover_description.launch">
-        <arg name="world_file"              value="/home/marwan/catkin_ws/src/rover_description/worlds/moon_surface.world"/>
-        <arg name="gui_state"               value="false"/>
-        <arg name="enable_manual_cmd_vel"   value="true"/>
+    <env name="ROSCONSOLE_CONFIG_FILE" value="$(find rover_nav)/custom_rosconsole.conf"/>
+
+    <!-- launch robot description and gazebo -->
+    <include file="$(find leo_gazebo)/launch/leo_gazebo.launch" pass_all_args="true">
+        <arg name="world_name" value="$(find marsyard)/worlds/marsyard.world"/>
+        <arg name="gui" value="false"/>
     </include>
 
-    <!-- Mapping launch file -->
-    <include file="$(find rover_nav)/launch/octo_mapping.launch"/>
-    
+    <!-- temporarly publish map -> odom tf untill a localiser is used -->
+    <!-- Ensure enable_odom_tf is true in /leo_gazebo/config/controllers.yaml -->
+    <node pkg="tf2_ros" type="static_transform_publisher" name="map_2_odom_broadcaster" args="0 0 0 0 0 0 map odom" />
+
+    <!-- Publish global grid_map -->
+    <node name="grid_map_pcl_loader_node" pkg="grid_map_pcl" type="grid_map_pcl_loader_node" output="screen">
+        <rosparam file="$(find grid_map_pcl)/config/parameters.yaml" />
+        <param name="folder_path" type="string" value="/home/marwan" />
+        <param name="pcd_filename" type="string" value="output.pcd" />
+        <param name="map_rosbag_topic" type="string" value="grid_map" />
+        <param name="output_grid_map" type="string" value="elevation_map.bag" />
+        <param name="map_frame" type="string" value="map" />
+        <param name="map_layer_name" type="string" value="elevation" />
+        <param name="set_verbosity_to_debug" type="bool" value="false" />
+    </node>
+
     <!-- Loading the gridmap filter chain -->
     <rosparam file="$(find rover_nav)/config/grid_map/filters.yaml" command="load" />
 
     <node pkg="move_base" type="move_base" respawn="false" name="move_base" output="screen">
-        <rosparam file="$(find rover_nav)/config/move_base/nav_3d_costmap_params.yaml"      command="load" ns="global_costmap"/>
-        <rosparam file="$(find rover_nav)/config/move_base/nav_3d_costmap_params.yaml"      command="load" ns="local_costmap"/>
-        <rosparam file="$(find rover_nav)/config/move_base/base_local_planner_params.yaml"  command="load"/>
-        
-        <param name="base_global_planner"   value="planner_3d/Planner3D"/>
-        <param name="controller_frequency"  value="1.0"/>
-        <param name="planner_frequency"     value="1.0"/>
+        <rosparam file="$(find rover_nav)/config/move_base/nav_3d_costmap_params.yaml" command="load" ns="global_costmap"/>
+        <rosparam file="$(find rover_nav)/config/move_base/nav_3d_costmap_params.yaml" command="load" ns="local_costmap"/>
+        <rosparam file="$(find rover_nav)/config/move_base/base_local_planner_params.yaml" command="load"/>
+
+        <param name="base_global_planner" value="planner_3d/Planner3D"/>
+        <param name="controller_frequency" value="1.0"/>
+        <param name="planner_frequency" value="1.0"/>
     </node>
 
     <node pkg="rviz" type="rviz" name="rviz" args="-d $(find rover_nav)/rviz/octomap_sim.rviz"/>
