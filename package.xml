@@ -21,7 +21,7 @@
   <depend>rviz</depend>
   <depend>roscpp</depend>
   <depend>rospy</depend>
-  <depend>octomap_server</depend>
+  <depend>message_to_tf</depend>
 
   <export>
         <nav_core plugin="${prefix}/bgp_plugin.xml" />
