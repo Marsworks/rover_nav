@@ -44,7 +44,7 @@ struct node
 
             slope = map.at(slope_layer, index);
             
-            ROS_INFO("Slope: %0.3f", slope);
+            // ROS_DEBUG("Slope: %0.3f", slope);
 
             // Marking cell with a slope of bigger 45 deg as non-traversable
             if(abs(slope) > 1.07)
@@ -116,18 +116,25 @@ void Planner3D::initialize(std::string name, costmap_2d::Costmap2DROS *costmap_r
 {
     ROS_INFO("Initiallising...");
 
-    n = ros::NodeHandle("~/" + name); // name: Planner3D
+    nh = ros::NodeHandle("~/" + name); // name: Planner3D
 
-    marker_publisher = n.advertise<visualization_msgs::Marker>("/explored_cells", 1, true);
-    full_map_publisher = n.advertise<grid_map_msgs::GridMap>("/full_gridmap", 1, true);
-    filtered_map_publisher = n.advertise<grid_map_msgs::GridMap>("/filtered_gridmap", 1, true);
+    marker_publisher = nh.advertise<visualization_msgs::Marker>("/explored_cells", 1, true);
+    full_map_publisher = nh.advertise<grid_map_msgs::GridMap>("/full_gridmap", 1, true);
+    filtered_map_publisher = nh.advertise<grid_map_msgs::GridMap>("/filtered_gridmap", 1, true);
 
-    global_map_subscrber = n.subscribe<grid_map_msgs::GridMap>("/grid_map_pcl_loader_node/grid_map_from_raw_pointcloud", 1, &Planner3D::gridmap_callback, this);
+    global_map_subscrber = nh.subscribe<grid_map_msgs::GridMap>("/grid_map_pcl_loader_node/grid_map_from_raw_pointcloud", 1, &Planner3D::gridmap_callback, this);
+
+    nh.param<std::string>(name + "/elevation_layer", elevation_layer, "elevation");
+    nh.param<std::string>(name + "/slope_layer", slope_layer, "elevation");
+    nh.param<double>(name + "/factor_0", factors[0], 1);
+    nh.param<double>(name + "/factor_1", factors[1], 0);
+    nh.param<double>(name + "/factor_2", factors[2], 0);
+    nh.param<double>(name + "/factor_3", factors[3], 0);
 
     grid_map_initialized = false;
 
     // Configuring the filter chain
-    if (!map_filter.configure("/grid_map_filters", n))
+    if (!map_filter.configure("/grid_map_filters", nh))
     {
         ROS_ERROR("Could not configure the filter chain.");
         return;
@@ -146,14 +153,6 @@ void Planner3D::initialize(std::string name, costmap_2d::Costmap2DROS *costmap_r
     marker.color.r = 1.0;
     marker.mesh_resource = "package://pr2_description/meshes/base_v0/base.dae";
 
-    factors[0] = 1; // g+h factor
-    factors[1] = 1; // not used
-    factors[2] = 1; // elevation factor; not used
-    factors[3] = 1; // slope factor 
-
-    elevation_layer = "elevation";
-    slope_layer = "elevation";
-
     ROS_INFO("planner_3D initiallised");
 }
 
@@ -168,15 +167,17 @@ void Planner3D::gridmap_callback(const grid_map_msgs::GridMapConstPtr &grid_map_
     // full_map_publisher.publish(grid_map_message);
 
     // Filter grid map
-    ROS_INFO("Filtering raw GridMap...");
-    if (!map_filter.update(raw_gridmap, filtered_gridmap)) 
-    {
-        ROS_ERROR("Could not update the grid map filter chain!");
-        return;
-    }
+    // ROS_INFO("Filtering raw GridMap...");
+    // if (!map_filter.update(raw_gridmap, filtered_gridmap)) 
+    // {
+    //     ROS_ERROR("Could not update the grid map filter chain!");
+    //     return;
+    // }
 
-    grid_map::GridMapRosConverter::toMessage(filtered_gridmap, grid_map_message);
-    filtered_map_publisher.publish(grid_map_message);
+    // ROS_ERROR_STREAM(filtered_gridmap.getLayers()[0]);
+    // grid_map_message = *grid_map_msg_ptr;
+    // grid_map::GridMapRosConverter::toMessage(filtered_gridmap, grid_map_message);
+    // filtered_map_publisher.publish(grid_map_message);
 
     ROS_INFO("GridMap filtered");
 }
