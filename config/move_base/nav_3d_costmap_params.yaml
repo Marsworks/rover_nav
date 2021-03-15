@@ -1,9 +1,0 @@
-global_frame: map
-robot_base_frame: base_link
-update_frequency: 1
-publish_frequency: 10
-rolling_window: true
-width: 2
-height: 2
-transform_tolerance: 2
-footprint: [[-0.45, -0.375], [0.45, -0.375], [0.45, 0.375], [-0.45, 0.375]]
