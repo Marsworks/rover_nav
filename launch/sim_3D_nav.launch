@@ -4,7 +4,7 @@
     <!-- launch robot description and gazebo -->
     <include file="$(find leo_gazebo)/launch/leo_gazebo.launch" pass_all_args="true">
         <arg name="world_name" value="$(find marsyard)/worlds/marsyard.world"/>
-        <arg name="gui" value="false"/>
+        <arg name="gui" value="true"/>
     </include>
 
     <!-- temporarly publish map -> odom tf untill a localiser is used -->
@@ -22,8 +22,8 @@
     <!-- Publish global grid_map -->
     <node name="grid_map_pcl_loader_node" pkg="grid_map_pcl" type="grid_map_pcl_loader_node" output="screen">
         <rosparam file="$(find grid_map_pcl)/config/parameters.yaml" />
-        <param name="folder_path" type="string" value="/home/marwan" />
-        <param name="pcd_filename" type="string" value="output.pcd" />
+        <param name="folder_path" type="string" value="$(find rover_nav)/data" />
+        <param name="pcd_filename" type="string" value="mars_yard_map.pcd" />
         <param name="map_rosbag_topic" type="string" value="grid_map" />
         <param name="output_grid_map" type="string" value="elevation_map.bag" />
         <param name="map_frame" type="string" value="map" />
